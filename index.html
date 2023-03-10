@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Page</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: sans-serif;
+      background-color: #F9F9F9;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    
+    .container {
+      max-width: 600px;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    h1 {
+      margin-top: 0;
+    }
+    
+    .ssh-login {
+      background-color: #FFFFFF;
+      border: 1px solid #DDDDDD;
+      border-radius: 4px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .command {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    code {
+      background-color: #F5F5F5;
+      padding: 5px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    
+	.copy-btn {
+		background-color: #F5F5F5;
+		border: 1px solid #DDDDDD;
+		border-radius: 4px;
+	}
+    
+    .copy-btn:hover {
+      	cursor: pointer;
+		background-color: #C5C5C5;
+    }
+
+	.copy-btn:active {
+		transform: scale(0.98);
+		box-shadow: 3px 2px 22px 1px rgba(0, 0, 0, 0.24);
+	}
+    
+    .telegram-login {
+      background-color: #FFFFFF;
+      border: 1px solid #DDDDDD;
+      border-radius: 4px;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+<div class="container"">
+    <h1>Login</h1>
+	<div class="ssh-login" style="{SSH_DISABLING_CSS}">
+		<p>Execute the command below:</p>
+		<div class="command">
+			<code class="ssh-command">ssh <span id="hostname"></span> -p {SSH_PORT} <span id="token"></span></code>
+			<button class="copy-btn" onclick="copyToClipboard()">
+				<svg
+				width="24"
+				height="24"
+				viewBox="0 0 24 24"
+				fill="none"
+				xmlns="http://www.w3.org/2000/svg"
+				>
+				<path d="M13 7H7V5H13V7Z" fill="currentColor" />
+				<path d="M13 11H7V9H13V11Z" fill="currentColor" />
+				<path d="M7 15H13V13H7V15Z" fill="currentColor" />
+				<path
+				fill-rule="evenodd"
+				clip-rule="evenodd"
+				d="M3 19V1H17V5H21V23H7V19H3ZM15 17V3H5V17H15ZM17 7V19H9V21H19V7H17Z"
+				fill="currentColor"
+				/>
+				</svg>
+			</button>
+    	</div>
+ 	</div>
+	<div class="telegram-login" style="{WIDGET_DISABLING_CSS}">
+		<p>Login with Telegram:</p>
+		<script async src="https://telegram.org/js/telegram-widget.js?21" data-telegram-login="{TELEGRAM_BOT_NAME}" data-size="large" data-onauth="onTelegramAuth(user)"></script>
+	</div>
+</div>
+
+<script>
+	function copyToClipboard() {
+		var copyText = document.querySelector(".ssh-command");
+		var tempInput = document.createElement("input");
+		tempInput.style.opacity = "0";
+		tempInput.value = copyText.innerText;
+		document.body.appendChild(tempInput);
+		tempInput.select();
+		document.execCommand("copy");
+		document.body.removeChild(tempInput);
+	}
+	///////////////////////////////////////////////////////////////////////////
+  	function setCookie(name,value,days) {
+		var expires = "";
+		if (days) {
+			var date = new Date();
+			date.setTime(date.getTime() + (days*24*60*60*1000));
+			expires = "; expires=" + date.toUTCString();
+		}
+		document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+	}
+
+	function getCookie(name) {
+		var nameEQ = name + "=";
+		var ca = document.cookie.split(';');
+		for(var i=0;i < ca.length;i++) {
+			var c = ca[i];
+			while (c.charAt(0)==' ') c = c.substring(1,c.length);
+			if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+		}
+		return "";
+	}
+
+	document.getElementById('hostname').innerText = window.location.hostname;
+
+	var token = getCookie("jauth_token");
+	if (token == "") {
+		var array = new Uint32Array(30);
+		var long = ""
+		window.crypto.getRandomValues(array);
+		for (let i = 0; i < 30; i++) {
+			long += array[i].toString(36)
+		}
+		for (let i = 0; i < 24; i++) {
+			if (i % 5 == 4) {
+				token += '-'
+			} else {token += long[i]}
+		}
+		setCookie("jauth_token", token, 7); // expires in week
+	}
+
+	document.getElementById('token').innerText = token;
+	///////////////////////////////////////////////////////////////////////////
+	function checkAuth(){ 
+		fetch("/jauth-check")
+		.then(response => response.text())
+		.then(newContent => {
+			// Uniq value for our page. Prevent visual refresh
+			if (newContent.includes("true")) {
+				window.location.reload(true);
+			} else {
+				setTimeout(checkAuth, 1000);
+			}
+		}).catch(function(){window.location.reload(true);});
+	}
+	setTimeout(checkAuth, 1000);
+	///////////////////////////////////////////////////////////////////////////
+	function onTelegramAuth(user) {
+		var checkString = user.hash;
+		// generate data-check-string
+		var keys = [];
+		// Sort
+		for (var key in user) {
+			if (user.hasOwnProperty(key) && key != "hash") {
+				keys.push(key)
+			}
+		}
+		keys.sort();
+		for (i = 0; i < keys.length; i++) {
+			checkString +=  '\n' + keys[i] + '=' + user[keys[i]];
+		}
+		fetch('/jauth-telegram', {
+			method: 'POST',
+			body: checkString,
+			headers: {
+			'Content-Type': 'application/x-www-form-urlencoded'
+			}
+		})
+		.then(response => response.text())
+		.then(html => {
+			if (html == "reload") {
+				window.location.reload(true);
+			} else {
+				document.body.innerHTML = html;
+			}
+		})
+		.catch(error => {
+			console.error(error);
+		});
+	}
+</script>
+</body>
+</html>

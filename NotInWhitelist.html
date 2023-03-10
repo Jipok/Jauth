@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Page</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: sans-serif;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 2rem;
+        }
+
+        a {
+            display: inline-block;
+            background-color: #007bff;
+            color: #fff;
+            padding: 1rem 2rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 1.2rem;
+            margin-top: 2rem;
+            transition: background-color 0.2s ease;
+        }
+
+        a:hover {
+            background-color: #0062cc;
+        }
+    </style>
+
+<body>
+    <!-- Next will filled via `fmt.Fprintf` in main handler in auth-handler.go   -->
+    <h1 style="text-align:center;">User `%s` is not on the whitelist<br><a href="%s">Logout</a></h1>
+</body>
+
+</html>
