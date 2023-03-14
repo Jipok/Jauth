@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 const (
@@ -41,7 +42,7 @@ func writeIndexPage(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	// Unfortunately, there are (at the time of 2023) browsers that do not show
 	// the content of the page if they receive a 407 error
-	w.WriteHeader(http.StatusOK) // was http.StatusProxyAuthRequired
+	// w.WriteHeader(http.StatusProxyAuthRequired)
 	page := domainToLoginPage[req.Host]
 	// Following is needed for unspecified domains in `manual` and `self-signed` modes
 	// It will also be used if client requested without a domain(by ip address)
@@ -64,7 +65,7 @@ func handleLogout(w http.ResponseWriter, req *http.Request) {
 	}
 	// MaxAge: -1 mean deleting cookie
 	http.SetCookie(w, &http.Cookie{Name: "jauth_token", Value: "", MaxAge: -1})
-	http.Redirect(w, req, "/", http.StatusFound)
+	http.Redirect(w, req, "https://"+req.Host, http.StatusFound)
 }
 
 // Single Sign-On. Third step
@@ -80,16 +81,17 @@ func SSO3(w http.ResponseWriter, req *http.Request) bool {
 	// token as cookie and redirect to the requested address. This should be safe
 	// for us on any data received.
 	parts := strings.SplitN(tokenPlusURI, "/", 2)
+	url := "https://" + req.Host + "/"
 
-	if len(parts) != 2 {
-		// This shouldn't happen in a normal use case. But can since this public endpoint
-		http.Redirect(w, req, req.Host, http.StatusFound)
-		return true
+	// This should always be the case in normal use.
+	// But since this is a public endpoint, anything can happen.
+	if len(parts) == 2 {
+		url += parts[1]
 	}
 	// We give the user an authorization token from another domain
+	// TODO no 3th redirect
 	http.SetCookie(w, &http.Cookie{Name: "jauth_token", Value: parts[0], HttpOnly: true, SameSite: http.SameSiteStrictMode, Path: "/"})
 	// Redirect to the user's original page
-	url := "https://" + req.Host + "/" + parts[1]
 	http.Redirect(w, req, url, http.StatusFound)
 	return true
 }
@@ -108,18 +110,19 @@ func SSO2(w http.ResponseWriter, req *http.Request, token string, username strin
 	target := "https://"
 	parts := strings.SplitN(domainPlusURI, "/", 2)
 	if len(parts) == 2 {
-		domain := parts[0]
+		targetDomain := parts[0]
 		// Check target domain
-		_, ok := domains[domain]
+		_, ok := domains[targetDomain]
 		if !ok {
-			log.Printf(red("Warning! User `%s` tried to transfer an authorization token to a foreign domain: %s"), username, domain)
+			log.Printf(red("Warning! User `%s` tried to transfer an authorization token to a foreign domain: %s"), username, targetDomain)
+			target += req.Host
 		} else {
-			target += domain
+			target += targetDomain
 			target += "/jauth-sso-token/"
 			target += token
 			target += "/"
 			target += parts[1]
-			log.Printf("User `%s` logged in to `%s` through `%s`. Token: %s", username, domain, req.Host, token)
+			log.Printf("User `%s` logged in to `%s` through `%s`. Token: %s", username, targetDomain, req.Host, token)
 		}
 	} else {
 		// Something went wrong. Leave the user on the current domain
@@ -153,12 +156,42 @@ func SSO1(w http.ResponseWriter, req *http.Request) bool {
 
 // Called by JS every second to check if the token is authorized
 func handleCheckAuth(w http.ResponseWriter, req *http.Request) {
+	// Check for ssh token
+	if len(ssh_tokens) > 0 {
+		cookie, err := req.Cookie("jauth_ssh_token")
+		if (err == nil) && (len(cookie.Value) > 0) {
+			sshToken := cookie.Value
+			// Lock and read global var
+			ssh_tokens_mutex.RLock()
+			ssh_token_info, in_tokens := ssh_tokens[sshToken]
+			ssh_tokens_mutex.RUnlock()
+			if in_tokens {
+				// SSH token match. User authorized
+				token := provideCookieWithNewToken(w, req, ssh_token_info.username)
+				// Force JS script to refresh the page
+				w.Write([]byte("true"))
+				// Provide browser information to ssh
+				addr := strings.SplitN(req.RemoteAddr, ":", 2)
+				ssh_token_info.browserAddr = addr[0] // Drop useless client's port
+				ssh_token_info.browserAgent = req.UserAgent()
+				// Thanks to SSO3, it's very easy to implement ability to share a link to a session.
+				// JS side gives us either the current host or the host to be redirected to after SSO2.
+				ssh_token_info.browserLink = "https://" + req.URL.RawQuery + "/jauth-sso-token/" + token + "/"
+				// Lock and modify global var
+				ssh_tokens_mutex.Lock()
+				ssh_tokens[sshToken] = ssh_token_info
+				ssh_tokens_mutex.Unlock()
+				return
+			}
+		}
+	}
+	// User could have logged into site through a different browser tab. Check it
 	cookie, err := req.Cookie("jauth_token")
-	w.WriteHeader(http.StatusOK)
 	if err == nil {
 		token := cookie.Value
 		_, in_tokens := tokens.Load(token)
 		if in_tokens {
+			// Force JS script to refresh the page
 			w.Write([]byte("true"))
 		}
 	}
@@ -175,13 +208,6 @@ func buildAuthHandler(handler http.Handler) http.Handler {
 		cookie, err := req.Cookie("jauth_token")
 		if err == nil {
 			token := cookie.Value
-			if len(token) != TOKEN_LENGTH {
-				// Length of the token may change in the future
-				// Therefore, we tell the browser to delete cookies, and not ignore the request
-				http.SetCookie(w, &http.Cookie{Name: "jauth_token", Value: "", MaxAge: -1})
-				writeIndexPage(w, req)
-				return
-			}
 			// Check token
 			tmp, in_tokens := tokens.Load(token)
 			if in_tokens {
@@ -191,11 +217,24 @@ func buildAuthHandler(handler http.Handler) http.Handler {
 				if SSO2(w, req, token, username) {
 					return
 				}
-				// Check token countdown, reset if needed
+				// Check token countdown
 				if tokenInfo.countdown < cfg.MaxNonActiveTime {
-					// TODO send time to client
+					// Not save instantly, since tokensCountdown will save soon anyway
 					tokenInfo.countdown = cfg.MaxNonActiveTime
 					tokens.Store(token, tokenInfo)
+				}
+				// Check useragent and IP address change
+				ip := strings.Split(req.RemoteAddr, ":")[0]
+				lastEntry := tokenInfo.history[len(tokenInfo.history)-1]
+				if (lastEntry.ip != ip) || (lastEntry.useragent != req.UserAgent()) {
+					tokenInfo.history = append(tokenInfo.history, Token_Usage_History{
+						time:      time.Now().Unix(),
+						ip:        ip,
+						useragent: req.UserAgent(),
+					})
+					tokens.Store(token, tokenInfo)
+					// Important information, save now
+					go saveTokens()
 				}
 				// Check for domain whitelist. Empty array mean all allowed
 				whitelist := domains[req.Host].Whitelist
@@ -244,14 +283,8 @@ func handleTelegramAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jauth_token_cookie, err := r.Cookie("jauth_token")
-	if err != nil {
-		http.Error(w, "", http.StatusProxyAuthRequired)
-		return
-	}
-
-	telegramTokenSHA256 := domainToTokenSHA256[r.Host]
-	if err != nil {
+	telegramTokenSHA256, ok := domainToTokenSHA256[r.Host]
+	if !ok {
 		http.Error(w, "Telegram Widget for that domain not configured", http.StatusNotFound)
 		return
 	}
@@ -291,6 +324,11 @@ func handleTelegramAuth(w http.ResponseWriter, r *http.Request) {
 
 	// Checking whitelist
 	username := cfg.TelegramUsers[user["id"]]
+	if (username == "") && (user["username"] != "") {
+		// I use @ for security reasons. Otherwise, any user can set their own
+		// username to the specified in config ID and log in.
+		username = cfg.TelegramUsers["@"+user["username"]]
+	}
 	if username == "" {
 		log.Printf("The user tried to log in via telegram:\n%s\n\n", dataCheckString)
 		resp := fmt.Sprintf("<h1 style=\"text-align:center;\">Access denied!<br>Your ID: %s</h1>", user["id"])
@@ -298,23 +336,30 @@ func handleTelegramAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Finally add token
-	if AddToken(username, jauth_token_cookie.Value) {
-		// JS script from index.html will reload page
-		fmt.Fprint(w, "reload")
-	} else {
-		http.Error(w, "AddToken fail", http.StatusInternalServerError)
-	}
+	// Finally
+	provideCookieWithNewToken(w, r, username)
+	// JS script will reload page
+	w.Write([]byte("true"))
 
 	// What TODO with provided auth_date?
 	// timestamp, err := strconv.ParseInt(user["auth_date"], 10, 64)
 	// if err != nil {
-	// 	return nil, err
 	// }
+}
 
-	// max := int64(7 * 24 * time.Hour.Seconds())
-	// if (timestamp + max) < time.Now().Unix() {
-	// 	????????????????
-	//	http.Redirect(w, r, "/", http.StatusFound)
-	// }
+func provideCookieWithNewToken(w http.ResponseWriter, req *http.Request, username string) string {
+	ip := strings.Split(req.RemoteAddr, ":")[0]
+	token := newToken(username, ip, req.UserAgent())
+	http.SetCookie(w,
+		&http.Cookie{
+			Name:     "jauth_token",
+			Value:    token,
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteStrictMode,
+			Path:     "/",
+		})
+	// MaxAge: -1 mean deleting cookie
+	http.SetCookie(w, &http.Cookie{Name: "jauth_ssh_token", Value: "", MaxAge: -1})
+	return token
 }

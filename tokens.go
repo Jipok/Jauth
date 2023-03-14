@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/rand"
 	"io/ioutil"
 	"log"
+	"math/big"
 	"os"
 	"strconv"
 	"strings"
@@ -11,14 +13,21 @@ import (
 )
 
 type Token_Info struct {
-	username string
 	// This counter shows how many TOKEN_COUNTDOWN_TIMER are left before the token is revoked
 	// Updated to the maximum(cfg.MaxNonActiveTime) value on any use of the token
 	countdown int
+	username  string
+	history   []Token_Usage_History
+}
+
+type Token_Usage_History struct {
+	time      int64
+	ip        string
+	useragent string
 }
 
 const (
-	TOKEN_LENGTH          = 24 // Not provided to the frontend
+	TOKEN_LENGTH          = 24
 	TOKEN_COUNTDOWN_TIMER = time.Hour
 	TOKENS_FILE           = "jauth-tokens.txt"
 )
@@ -28,23 +37,51 @@ var (
 	SaveTokensMutex sync.Mutex
 )
 
-func AddToken(username string, token string) bool {
-	if len(token) != TOKEN_LENGTH {
-		return false
+// GenerateRandomString returns a securely generated random string.
+// It will return an error if the system's secure random
+// number generator fails to function correctly, in which
+// case the caller should not continue. Source:
+// https://gist.github.com/dopey/c69559607800d2f2f90b1b1ed4e550fb
+func GenerateRandomString(n int) string {
+	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	ret := make([]byte, n)
+	for i := 0; i < n; i++ {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		if err != nil {
+			log.Fatal("Fatal at GenerateRandomString: ", err)
+		}
+		ret[i] = letters[num.Int64()]
 	}
-	// Check for duplicate
+	return string(ret)
+}
+
+// Generate and store new token
+func newToken(username string, ip string, useragent string) string {
+	token := strconv.FormatInt(time.Now().Unix(), 10)
+	token += "-"
+	token += GenerateRandomString(TOKEN_LENGTH)
+	// Check for duplicate. Must be almost impossible. But let's make sure
 	_, in_tokens := tokens.Load(token)
 	if in_tokens {
-		return false
+		return newToken(username, ip, useragent)
 	}
-	tokenInfo := Token_Info{username: username, countdown: cfg.MaxNonActiveTime}
+	hEntry := Token_Usage_History{
+		time:      time.Now().Unix(),
+		ip:        ip,
+		useragent: useragent,
+	}
+	history := []Token_Usage_History{hEntry}
+	tokenInfo := Token_Info{
+		username:  username,
+		countdown: cfg.MaxNonActiveTime,
+		history:   history,
+	}
 	// Store safe to use with goroutines
 	tokens.Store(token, tokenInfo)
 	log.Printf("New token for '%s': %s", username, token)
 	// Persistent save for each new token
-	saveTokens()
-
-	return true
+	go saveTokens()
+	return token
 }
 
 // From global var `tokens` to file TOKENS_FILE
@@ -60,11 +97,21 @@ func saveTokens() {
 		log.Printf(red("Failed to save tokens!\n%s"), err)
 		return
 	}
-	tokens.Range(func(token, tokenInfo interface{}) bool {
-		p1 := token.(string)
-		p2 := tokenInfo.(Token_Info).username
-		p3 := strconv.Itoa(tokenInfo.(Token_Info).countdown)
+	tokens.Range(func(tokenPointer, tokenInfoPointer interface{}) bool {
+		// Information about the token takes one line and is separated by tabs
+		tokenInfo := tokenInfoPointer.(Token_Info)
+		p1 := tokenPointer.(string)
+		p2 := strconv.Itoa(tokenInfo.countdown)
+		p3 := tokenInfo.username
 		file.WriteString(p1 + "\t" + p2 + "\t" + p3 + "\n")
+		// Historical information is also tab-separated and takes up one line per
+		// entry, but starts with a tab to distinguish it from a token.
+		for _, v := range tokenInfo.history {
+			p1 = strconv.FormatInt(v.time, 10)
+			p2 = v.ip
+			p3 = v.useragent
+			file.WriteString("\t" + p1 + "\t" + p2 + "\t" + p3 + "\n")
+		}
 		return true
 	})
 	// Flush data to disk
@@ -91,22 +138,43 @@ func loadTokens() error {
 	if err != nil {
 		return err
 	}
+	var tokenInfo Token_Info
+	lines := strings.Split(string(tokens_data), "\n")
 	// Each line contains one Token_Info
-	for _, line := range strings.Split(string(tokens_data), "\n") {
-		if line == "" {
+	for i := 0; i < len(lines); i++ {
+		if lines[i] == "" {
 			continue
 		}
-		// token,username,countdown separated by TAB
-		parts := strings.Split(line, "\t")
+		// token,countdown,username separated by TAB
+		parts := strings.SplitN(lines[i], "\t", 3)
 		if len(parts) < 3 {
-			log.Printf("Invalid line in %s: %s", TOKENS_FILE, line)
+			log.Printf("Invalid line in %s:%d: %s", TOKENS_FILE, i, lines[i])
 			continue
 		}
 		token := parts[0]
-		username := parts[1]
-		countdown, err := strconv.Atoi(parts[2])
+		countdown, err := strconv.Atoi(parts[1])
+		username := parts[2]
 		if err != nil {
 			log.Fatal(err)
+		}
+		// Parse token history. Each entry starts with tab
+		history := []Token_Usage_History{}
+		var hEntry Token_Usage_History
+		for (i+1 < len(lines)) && (len(lines[i+1]) > 0) && (lines[i+1][0] == '\t') {
+			i += 1
+			parts = strings.SplitN(lines[i], "\t", 4)
+			if len(parts) < 4 {
+				log.Printf("Invalid line in %s:%d: %s", TOKENS_FILE, i, lines[i])
+				continue
+			}
+			hEntry.time, err = strconv.ParseInt(parts[1], 10, 64)
+			if err != nil {
+				log.Printf("Invalid line in %s:%d: %s", TOKENS_FILE, i, lines[i])
+				continue
+			}
+			hEntry.ip = parts[2]
+			hEntry.useragent = parts[3]
+			history = append(history, hEntry)
 		}
 		// Drop token for deleted user
 		in_tg := false
@@ -117,10 +185,10 @@ func loadTokens() error {
 		}
 		_, in_ssh := authorized_keys[username]
 		if !in_tg && !in_ssh {
-			log.Printf("Tokens for %s revoked as user is no longer registered", username)
+			log.Printf("Token for %s revoked as user is no longer registered", username)
 			continue
 		}
-		tokenInfo := Token_Info{username: username, countdown: countdown}
+		tokenInfo = Token_Info{username: username, countdown: countdown, history: history}
 		tokens.Store(token, tokenInfo)
 	}
 	return nil

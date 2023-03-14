@@ -91,7 +91,6 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-
 	// Some default settings
 	cfg.SSH.Enabled = true
 	cfg.SSH.Port = "22222"
@@ -116,6 +115,13 @@ func main() {
 	cfg.SSH.AuthorizedKeys = expandTilde(cfg.SSH.AuthorizedKeys)
 	cfg.Certificate.Cert = expandTilde(cfg.Certificate.Cert)
 	cfg.Certificate.Key = expandTilde(cfg.Certificate.Key)
+	// Replace empty telegram usernames
+	for telegram_name, our_name := range cfg.TelegramUsers {
+		if our_name == "" {
+			our_name, _ = strings.CutPrefix(telegram_name, "@")
+			cfg.TelegramUsers[telegram_name] = our_name
+		}
+	}
 
 	// Load authorized_keys
 	if cfg.SSH.Enabled {
@@ -198,7 +204,7 @@ func main() {
 
 	// Load tokens for authorized users
 	loadTokens()
-	// Some info for user
+	// Some info for admin
 	log.Printf("Users registered: %d", len(authorized_keys)+len(cfg.TelegramUsers))
 	log.Printf("Active tokens: %d", len_tokens())
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -144,6 +145,7 @@ func startWebServer() {
 		}()
 	}
 
+	var err error
 	address := cfg.Listen + ":443"
 	log.Printf("Web server is listening: %s", address)
 	if cfg.Certificate.Type == "autocert" {
@@ -158,10 +160,24 @@ func startWebServer() {
 			TLSConfig: m.TLSConfig(),
 			Handler:   mux,
 		}
-		log.Fatal(s.ListenAndServeTLS("", ""))
+		err = s.ListenAndServeTLS("", "")
 	} else {
 		// manual or self-signed mode. Serve TLS using provided/generated certificate files
-		log.Fatal(http.ListenAndServeTLS(address, cfg.Certificate.Cert, cfg.Certificate.Key, mux))
+		err = http.ListenAndServeTLS(address, cfg.Certificate.Cert, cfg.Certificate.Key, mux)
 	}
-
+	log.Print(red(err.Error()))
+	if strings.HasSuffix(err.Error(), "bind: permission denied") {
+		fmt.Print("You can't bind to a privileged port (ports less than 1024) as a non-root user." + "\n" +
+			"There are various solutions:" + "\n" +
+			"1) Give the application the ability to bind privileged ports:" + "\n" +
+			green("    sudo setcap 'cap_net_bind_service=+ep' /path/to/jauth") + "\n" +
+			"2) Temporarily change the list of privileged ports(to 0-80) for the entire system:" + "\n" +
+			green("    sudo sysctl -w net.ipv4.ip_unprivileged_port_start=80") + "\n" +
+			"3) Permanently change the list of privileged ports(to 0-80) for the entire system" + "\n" +
+			green("    sudo echo 'net.ipv4.ip_unprivileged_port_start=0' > /etc/sysctl.d/50-unprivileged-ports.conf") + "\n" +
+			green("    sudo sysctl --system  # To apply the setting without rebooting") + "\n" +
+			"4) Run as root" + "\n" +
+			"5) Use an autobind: https://en.wikipedia.org/wiki/Authbind" + "\n")
+	}
+	os.Exit(1)
 }

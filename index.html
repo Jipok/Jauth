@@ -80,7 +80,7 @@
 	<div class="ssh-login" style="{SSH_DISABLING_CSS}">
 		<p>Execute the command below:</p>
 		<div class="command">
-			<code class="ssh-command">ssh <span id="hostname"></span> -p {SSH_PORT} <span id="token"></span></code>
+			<code class="ssh-command">ssh <span id="hostname"></span> -p {SSH_PORT} <span id="ssh_token"></span></code>
 			<button class="copy-btn" onclick="copyToClipboard()">
 				<svg
 				width="24"
@@ -143,29 +143,44 @@
 
 	document.getElementById('hostname').innerText = window.location.hostname;
 
-	var token = getCookie("jauth_token");
-	if (token == "") {
-		var array = new Uint32Array(30);
+	var ssh_token = getCookie("jauth_ssh_token");
+	if (ssh_token == "") {
+		ssh_token = "" 
+		var array = new Uint32Array(10);
 		var long = ""
 		window.crypto.getRandomValues(array);
-		for (let i = 0; i < 30; i++) {
-			long += array[i].toString(36)
+		// Length is checked on the server side. Need for ssh-server to
+		// distinguish the token from other requests (like sendEnv)
+		for (let i = 0; i < 7; i++) {
+			long += array[i].toString(10)
 		}
-		for (let i = 0; i < 24; i++) {
-			if (i % 5 == 4) {
-				token += '-'
-			} else {token += long[i]}
+		for (let i = 0; i < 7; i++) {
+			if (i == 3) {
+				// Dash is also checked on the server side
+				ssh_token += '-'
+			} else {
+				ssh_token += long[i]
+			}
 		}
-		setCookie("jauth_token", token, 7); // expires in week
+		setCookie("jauth_ssh_token", ssh_token, 365); // expires in year
 	}
 
-	document.getElementById('token').innerText = token;
+	document.getElementById('ssh_token').innerText = ssh_token;
 	///////////////////////////////////////////////////////////////////////////
+	const path = location.pathname.split('/');
+	var host = ""
+	if (path[1] == "jauth-sso") {
+		host = path[2]
+	} else {
+		host = location.hostname
+	}
 	function checkAuth(){ 
-		fetch("/jauth-check")
+		fetch("/jauth-check?" + host, {
+			method: 'GET',
+			credentials: 'include'
+		})
 		.then(response => response.text())
 		.then(newContent => {
-			// Uniq value for our page. Prevent visual refresh
 			if (newContent.includes("true")) {
 				window.location.reload(true);
 			} else {
@@ -198,7 +213,7 @@
 		})
 		.then(response => response.text())
 		.then(html => {
-			if (html == "reload") {
+			if (html == "true") {
 				window.location.reload(true);
 			} else {
 				document.body.innerHTML = html;
