@@ -215,6 +215,19 @@ func tokensCountdown() {
 	}
 }
 
+// Delete all user tokens
+func fullLogOut(username string) {
+	// Iterate over tokens
+	tokens.Range(func(token, tokenInfoInterface interface{}) bool {
+		tokenInfo := tokenInfoInterface.(Token_Info)
+		if tokenInfo.username == username {
+			tokens.Delete(token)
+		}
+		return true
+	})
+	log.Printf("Revoked all tokens for a user: %s", username)
+}
+
 // Go don't have method to calc len of sync.Map  -_-
 // https://github.com/golang/go/issues/20680
 func len_tokens() int {

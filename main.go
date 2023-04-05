@@ -101,7 +101,7 @@ func main() {
 	cfg.DropPrivileges = false // Drop privileges if started from root
 	cfg.Listen = "0.0.0.0"
 	cfg.RedirectHTTP = true   // Start server on 80 port that will redirect all to 443 port
-	cfg.MaxNonActiveTime = 24 // TOKEN_COUNTDOWN_TIMER
+	cfg.MaxNonActiveTime = 30 // TOKEN_COUNTDOWN_TIMER
 	cfg.LogoutURL = "/jauth-logout"
 
 	// Load user's config file

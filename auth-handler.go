@@ -347,7 +347,13 @@ func handleTelegramAuth(w http.ResponseWriter, r *http.Request) {
 	// }
 }
 
+// Called upon successful authorization(telegram or ssh)
 func provideCookieWithNewToken(w http.ResponseWriter, req *http.Request, username string) string {
+	_, err := req.Cookie("jauth_terminate_all_other_sessions")
+	if err == nil {
+		fullLogOut(username)
+	}
+	// New token
 	ip := strings.Split(req.RemoteAddr, ":")[0]
 	token := newToken(username, ip, req.UserAgent())
 	http.SetCookie(w,
@@ -361,5 +367,6 @@ func provideCookieWithNewToken(w http.ResponseWriter, req *http.Request, usernam
 		})
 	// MaxAge: -1 mean deleting cookie
 	http.SetCookie(w, &http.Cookie{Name: "jauth_ssh_token", Value: "", MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{Name: "jauth_terminate_all_other_sessions", Value: "", MaxAge: -1})
 	return token
 }
