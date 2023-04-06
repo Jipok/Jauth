@@ -9,6 +9,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"embed"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -38,7 +39,7 @@ type Config struct {
 	}
 	Certificate struct {
 		Type  string
-		Email string
+		Email string // TODO
 		Cert  string
 		Key   string
 	}
@@ -93,7 +94,7 @@ func main() {
 	}
 	// Some default settings
 	cfg.SSH.Enabled = true
-	cfg.SSH.Port = "22222"
+	cfg.SSH.Port = "2222"
 	cfg.SSH.ServerKey = "~/.ssh/id_rsa"
 	cfg.SSH.AuthorizedKeys = "~/.ssh/authorized_keys"
 	cfg.Certificate.Type = "self-signed"
@@ -108,7 +109,11 @@ func main() {
 	// Toml module will automatically parse file into struct
 	_, err := toml.DecodeFile(config_file, &cfg)
 	if err != nil {
-		log.Fatal(err)
+		if errors.Is(err, os.ErrNotExist) {
+			log.Print(red("Configuration file not found"))
+		} else {
+			log.Fatal(err)
+		}
 	}
 	// Support paths with tilde ~
 	cfg.SSH.ServerKey = expandTilde(cfg.SSH.ServerKey)
