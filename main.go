@@ -28,6 +28,7 @@ type Domain_Info struct {
 	UserSuffix     string
 	Whitelist      []string
 	LoginFrom      string
+	NoAuth         bool
 }
 
 type Config struct {
@@ -70,6 +71,7 @@ var (
 	authorized_keys       = map[string]SSH_Info{}
 	domainToTokenSHA256   = map[string][]byte{}
 	domainToLoginPage     = map[string][]byte{} // gzip
+	domainNoAuth          = map[string]bool{}
 	domains               = map[string]Domain_Info{}
 )
 
@@ -203,6 +205,7 @@ func main() {
 			log.Fatal(err)
 		}
 		domainToLoginPage[domain.Domain] = buf.Bytes()
+		domainNoAuth[domain.Domain] = domain.NoAuth
 		// For easy lookup without loops
 		domains[domain.Domain] = domain
 	}

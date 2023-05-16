@@ -262,10 +262,16 @@ func buildAuthHandler(handler http.Handler) http.Handler {
 				return
 			}
 		}
+		// Does the site need our authorization?
+		if domainNoAuth[req.Host] {
+			handler.ServeHTTP(w, req)
+			return
+		}
 		// Single Sign-On. First step
 		if SSO1(w, req) {
 			return
 		}
+
 		writeIndexPage(w, req)
 	})
 }

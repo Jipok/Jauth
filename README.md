@@ -134,6 +134,8 @@ SSO = ""
     # log in through the bot on only one domain. An empty value means that
     # the current domain will be used.
     LoginFrom = ""
+    # If true, authorization will be disabled. jauth will act as ssl-proxy
+    NoAuth = false
 ```
 
 # Thanks to
