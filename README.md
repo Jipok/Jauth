@@ -76,6 +76,7 @@ SSO = "g.jipok.undo.it"
 * Login via ssh is enabled by default. The standard authorized_keys file format is used: each line contains a public key and a username. You can safely use your `~/.ssh/authorized_keys` (default) from the system ssh server. You can also easily change the username specified there to the desired one, for sshd it means almost nothing.
 * The list of authorized users is preserved between restarts in `./jauth-tokens.txt`
 * An authenticated user's username is passed to the server through the `Remote-User` HTTP header.
+* There is a `github-key-import.sh` script that allows for search and quick appending of SSH keys from a GitHub profile. It requires fzf and jq.
 
 ## Full configuration example
 ```toml
