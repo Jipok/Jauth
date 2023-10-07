@@ -1,5 +1,5 @@
 # Jauth
-Jauth is a lightweight SSL/TLS reverse proxy with authorization. Great for protect your self-hosted applications.
+Jauth is a lightweight SSL/TLS reverse proxy with authorization. Great for protect your self-hosted applications. Moreover, it offers SSO for simpler login management.
 
 ![Login screenshot](screenshot.png?raw=true)
 
@@ -30,9 +30,9 @@ chmod +x ./jauth
 
 Without the configuration, there will be the following behavior:
 * Generate a self-signed certificate valid for one year. It will be saved in the current directory and used on restart.
-* Run ssh server on `0.0.0.0:2222` for authorization. The list of authorized keys and their corresponding usernames is taken from `~/.ssh/authorized_keys`. Server key from `~/.ssh/id_rsa`
 * Run web server on `0.0.0.0:80` which will redirect all incoming connections to port `443`
 * Run web server on `0.0.0.0:443` with generated certificate. It accepts connections from any domain or directly by ip address. Displays the login page.
+* Run ssh server on `0.0.0.0:2222` for authorization. The list of authorized keys and their corresponding usernames is taken from `~/.ssh/authorized_keys`. Server key from `~/.ssh/id_rsa`
 * After authorization, requests will be redirected to `127.0.0.1:8080`
 
 # Configuration
@@ -44,7 +44,8 @@ By default, the server tries to open the `./jauth.toml` file. You can specify an
 Certificate.Type = "autocert"
 SSO = "g.jipok.undo.it"
 [TelegramUsers]
-    # Telegram Id is a safe way because the ID never changes
+    # Telegram Nick or ID = Login for services behind jauth
+    # ID is a safe way because it never changes
     354339153 = "Jipok"
     # But using a username is more convenient. Need to add @
     "@Jipok" = "Jipok"
@@ -57,10 +58,11 @@ SSO = "g.jipok.undo.it"
     target = "8080" # Will be `127.0.0.1:8080`
 [[Domains]] # Grist
     domain = "g.jipok.undo.it"
-    target = "8081" 
-    # Some applications use e-mail for identification
+    # You can redirect to any domain/ip
+    target = "not.localhost:8081"
+    # Some applications use e-mail for identification. Add suffix to all logins:
     UserSuffix = "@local"
-    # By default every user has access to every domain
+    # By default every user has access to every domain. Restrict access:
     Whitelist = ["Jipok", "Friend1"]
     WidgetBotName = "JipokSelfHosted_bot"
     WidgetBotToken = "9876543210:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -134,12 +136,12 @@ SSO = ""
     # log in through the bot on only one domain. An empty value means that
     # the current domain will be used.
     LoginFrom = ""
-    # If true, authorization will be disabled. jauth will act as ssl-proxy
+    # If true, authorization will be disabled. Jauth will act as ssl-proxy
     NoAuth = false
 ```
 
 # Thanks to
-* [SSH As Authentication For Web Applications](https://lukevers.com/2016/05/01/ssh-as-authentication-for-web-applications) blog post
+* [SSH As Authentication For Web Applications](https://lukevers.com/2016/05/01/ssh-as-authentication-for-web-applications) blog post. Link dead :(
 * [SSL-proxy](https://github.com/suyashkumar/ssl-proxy) project
 * Rich GO ecosystem that has an ssh implementation
 
