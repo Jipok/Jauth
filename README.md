@@ -142,7 +142,7 @@ SSO = ""
 ```
 
 # Thanks to
-* [SSH As Authentication For Web Applications](https://lukevers.com/2016/05/01/ssh-as-authentication-for-web-applications) blog post. Link dead :(
+* [SSH As Authentication For Web Applications](https://github.com/lukevers/ssh-as-authentication-for-web-applications)
 * [SSL-proxy](https://github.com/suyashkumar/ssl-proxy) project
 * Rich GO ecosystem that has an ssh implementation
 
