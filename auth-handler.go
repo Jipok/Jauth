@@ -257,8 +257,8 @@ func buildAuthHandler(handler http.Handler) http.Handler {
 				// Add suffix if present
 				username = username + domains[req.Host].UserSuffix
 				// Set proper header
-				req.Header.Add("Remote-User", username)
-				req.Header.Add("X-Forwarded-User", username)
+				req.Header.Set("Remote-User", username)
+				req.Header.Set("X-Forwarded-User", username)
 				// Passing the modified request to the reverse proxy
 				handler.ServeHTTP(w, req)
 				return
@@ -266,6 +266,9 @@ func buildAuthHandler(handler http.Handler) http.Handler {
 		}
 		// Does the site need our authorization?
 		if domainNoAuth[req.Host] {
+			// Preventing deception
+			req.Header.Del("Remote-User")
+			req.Header.Del("X-Forwarded-User")
 			handler.ServeHTTP(w, req)
 			return
 		}
