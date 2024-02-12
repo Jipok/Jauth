@@ -81,7 +81,7 @@ func startSshServer() {
 		}
 
 		// Seems next can some time. Not block listening loop
-		go handleChannels(sshConn, channels)
+		go handleChannels(*sshConn, channels)
 	}
 }
 
@@ -116,12 +116,12 @@ func publicKeyCallback(sshConn ssh.ConnMetadata, remoteKey ssh.PublicKey) (*ssh.
 		log.Printf("Public key math: %s", username)
 		return nil, nil
 	}
-	return nil, errors.New("Not authorized key")
+	return nil, errors.New("not authorized key")
 }
 
 // This is called for already authenticated(via publicKeyCallback) users
 // Handles receiving a token from the user
-func handleChannels(sshConn ssh.ConnMetadata, channels <-chan ssh.NewChannel) {
+func handleChannels(sshConn ssh.ServerConn, channels <-chan ssh.NewChannel) {
 	for newChannel := range channels {
 		// Channels have a type, depending on the application level protocol intended.
 		// In the case of a shell, the type is "session" and ServerShell may be used
@@ -196,7 +196,11 @@ func handleChannels(sshConn ssh.ConnMetadata, channels <-chan ssh.NewChannel) {
 						break
 					}
 				}
+				// Send exit code: 0 - success
+				// 4 zeros because answer must be uint32 (4 bytes)
+				channel.SendRequest("exit-status", false, []byte{0,0,0,0})
 				channel.Close()
+				sshConn.Close()
 				// Lock and modify global var
 				ssh_tokens_mutex.Lock()
 				delete(ssh_tokens, sshToken)
