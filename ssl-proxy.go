@@ -138,7 +138,13 @@ func startWebServer() {
 			http.Redirect(w, r, "https://"+r.Host+r.RequestURI, http.StatusMovedPermanently)
 		}
 		go func() {
-			err := http.ListenAndServe(cfg.Listen+":80", http.HandlerFunc(redirectTLS))
+			// TODO MaxHeaderBytes and timeouts to read/write/idle
+			httpServer := http.Server{
+				Addr:     cfg.Listen + ":80",
+				Handler:  http.HandlerFunc(redirectTLS),
+				ErrorLog: newServerErrorLog(),
+			}
+			err := httpServer.ListenAndServe()
 			if err != nil {
 				log.Fatal("HTTP redirection server failure", err)
 			}
@@ -159,6 +165,7 @@ func startWebServer() {
 			Addr:      address,
 			TLSConfig: m.TLSConfig(),
 			Handler:   mux,
+			ErrorLog:  newServerErrorLog(),
 		}
 		err = s.ListenAndServeTLS("", "")
 	} else {

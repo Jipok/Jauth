@@ -85,6 +85,10 @@ SSH.Enabled = false # Default true
 # Used if target not specifies in some [[Domains]] section
 # And for direct access via IP address in manual or self-signed mode
 DefaultTarget = "8080"
+# If true, will filter spam to stdout from http/https servers.
+# Messages like`http: TLS handshake error ...` occur due to
+# bots/crawlers checking all public addresses.
+FilterSpam = true
 # If true will drop privileges if started from root. 
 # Will not be able to save state(tokens) between restarts.
 DropPrivileges = false 
