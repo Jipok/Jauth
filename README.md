@@ -152,4 +152,4 @@ SSO = ""
 
 # Contributing
 
-I am a lover of minimalism (in the style of [suckless](https://suckless.org/philosophy/)). So for me the project is mostly finished. If you want to add some feature, then start a discussion before writing the code, as I can simply dismiss the idea.
+I prefer minimalism. If there is a feature you want to add, let's discuss it first before implementing the code. I'm open to changing my opinion, but I am generally satisfied with things as they are.
