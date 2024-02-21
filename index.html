@@ -154,7 +154,7 @@
 		var copyText = document.querySelector(".ssh-command");
 		var tempInput = document.createElement("input");
 		tempInput.style.opacity = "0";
-		tempInput.value = copyText.innerText;
+		tempInput.value = ' ' + copyText.innerText;
 		document.body.appendChild(tempInput);
 		tempInput.select();
 		document.execCommand("copy");
