@@ -191,14 +191,14 @@ func handleChannels(sshConn ssh.ServerConn, channels <-chan ssh.NewChannel) {
 						fmt.Fprintf(channel, "\n") // After dots
 						fmt.Fprintf(channel, green("Access granted!\n"))
 						fmt.Fprintf(channel, "Browser: %s\n", sshTokenInfo.browserAgent)
-						fmt.Fprintf(channel, "IP address: %s\n", sshTokenInfo.browserAddr)
-						fmt.Fprintf(channel, "You can share access to this session via the link:\n%s\n", sshTokenInfo.browserLink)
+						fmt.Fprintf(channel, "IP address: %s\n\n", sshTokenInfo.browserAddr)
+						fmt.Fprintf(channel, "You can share access to this session via the link:\n"+blue("%s\n"), sshTokenInfo.browserLink)
 						break
 					}
 				}
 				// Send exit code: 0 - success
 				// 4 zeros because answer must be uint32 (4 bytes)
-				channel.SendRequest("exit-status", false, []byte{0,0,0,0})
+				channel.SendRequest("exit-status", false, []byte{0, 0, 0, 0})
 				channel.Close()
 				sshConn.Close()
 				// Lock and modify global var

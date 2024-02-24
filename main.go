@@ -241,12 +241,16 @@ func main() {
 }
 
 // Add proper ANSI escape codes to render it green-colored in a supported terminal
+func red(in string) string {
+	return fmt.Sprintf("\033[0;31m%s\033[0;0m", in)
+}
+
 func green(in string) string {
 	return fmt.Sprintf("\033[0;32m%s\033[0;0m", in)
 }
 
-func red(in string) string {
-	return fmt.Sprintf("\033[0;31m%s\033[0;0m", in)
+func blue(in string) string {
+	return fmt.Sprintf("\033[0;34m%s\033[0;0m", in)
 }
 
 func expandTilde(path string) string {
