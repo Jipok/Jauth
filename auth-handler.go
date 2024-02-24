@@ -93,12 +93,12 @@ func SSO3(w http.ResponseWriter, req *http.Request) bool {
 	// We give the user an authorization token from another domain
 	// TODO no 3th redirect
 	http.SetCookie(w, &http.Cookie{
-		Name: "jauth_token", 
-		Value: parts[0], 
-		HttpOnly: true, 
+		Name:     "jauth_token",
+		Value:    parts[0],
+		HttpOnly: true,
 		Secure:   true,
-		SameSite: http.SameSiteLaxMode, 
-		Path: "/",
+		SameSite: http.SameSiteLaxMode, // https://stackoverflow.com/a/71467131
+		Path:     "/",
 	})
 	// Redirect to the user's original page
 	http.Redirect(w, req, url, http.StatusFound)
@@ -380,7 +380,7 @@ func provideCookieWithNewToken(w http.ResponseWriter, req *http.Request, usernam
 			Value:    token,
 			HttpOnly: true,
 			Secure:   true,
-			SameSite: http.SameSiteLaxMode,
+			SameSite: http.SameSiteLaxMode, // https://stackoverflow.com/a/71467131
 			Path:     "/",
 		})
 	// MaxAge: -1 mean deleting cookie

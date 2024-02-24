@@ -1,23 +1,39 @@
-name: Go
+name: Github Release
 
-on: [push]
+on:
+  push:
+    tags:
+      - "*"
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@master
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
+      # https://github.com/actions/setup-go
+      - uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
 
-    - name: Build
-      run: go build -v ./...
+      - run: go test ./...
 
-    - name: Build compact release
-      run: go build -ldflags "-s -w" -v ./...
+      - run: go build -ldflags "-s -w"  -o jauth
+      - run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o jauth_arm64
 
-    - name: Test
-      run: go test -v ./...
+      - name: Run UPX
+        uses: crazy-max/ghaction-upx@v3
+        with:
+          version: latest
+          files: |
+            jauth
+            jauth_arm64
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            jauth
+            jauth_arm64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
