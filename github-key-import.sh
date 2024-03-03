@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-file="${1:-$HOME/authorized_keys}"
+cd "$(dirname "$0")"
+file="${1:-$HOME/.ssh/authorized_keys}"
+[ -f "./authorized_keys" ] && file="${1:-$PWD/authorized_keys}"
 
 search() {
         q=$( echo $@ | tr " " '+' )
@@ -16,8 +18,8 @@ keys=$(curl -s "https://github.com/$username.keys" | sed "s/\$/ $username/")
 
 echo "Public keys: $keys"
 echo "Username: $username"
-[ -z "$@" ] && echo -e "\e[0;33mFilename not provided via cmdline. Using default one:\e[m"
-echo "Append to: $file"
+[ -z "$@" ] && [ ! -f "./authorized_keys" ] && echo -e "\e[0;33mFilename not provided via cmdline. Using default one:\e[m"
+echo -e "Append to:\033[0;34m $file \033[0m"
 
 read -r -p "Are you sure? [Y/n]" response
 response=${response,,} # tolower
