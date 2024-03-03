@@ -127,6 +127,11 @@ func startWebServer() {
 			r.SetXForwarded()
 			r.Out.Host = r.In.Host
 		},
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+			log.Printf(yellow("User can't access https://%s - ")+"%s", r.Host, err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write(embed_502_html)
+		},
 	}
 	// See auth-handler.go
 	mux := newAuthMux(proxy)

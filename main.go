@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/sha256"
-	"embed"
+	_ "embed"
 	"errors"
 	"fmt"
 	"log"
@@ -79,10 +79,13 @@ var (
 // Next comment will embed `index.html` file into executable during compile time
 //
 //go:embed index.html
-var embed_index_html embed.FS
+var embed_index_html string
 
 //go:embed NotInWhitelist.html
 var NotInWhitelist_PAGE string
+
+//go:embed 502.html
+var embed_502_html []byte
 
 func main() {
 	// Config filename can be provided via command line
@@ -142,15 +145,13 @@ func main() {
 	}
 
 	// Load login page. There is a built-in and the user can provide his own
-	var raw_index_page []byte
+	raw_index_page := []byte(embed_index_html)
 	if cfg.CustomPage != "" {
 		raw_index_page, err = os.ReadFile(cfg.CustomPage)
+		if err != nil {
+			log.Fatal(err)
+		}
 		log.Print("Using custom login page: ", cfg.CustomPage)
-	} else {
-		raw_index_page, err = embed_index_html.ReadFile("index.html")
-	}
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	// Add Domain_Info for non specified domains, ip address
@@ -251,6 +252,10 @@ func green(in string) string {
 
 func blue(in string) string {
 	return fmt.Sprintf("\033[0;34m%s\033[0;0m", in)
+}
+
+func yellow(in string) string {
+	return fmt.Sprintf("\033[0;33m%s\033[0;0m", in)
 }
 
 func expandTilde(path string) string {
