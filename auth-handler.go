@@ -61,7 +61,7 @@ func handleLogout(w http.ResponseWriter, req *http.Request) {
 		tmp, in_tokens := tokens.Load(cookie.Value)
 		if in_tokens {
 			tokenInfo := tmp.(Token_Info)
-			log.Printf("User `%s` logged out. Token: %s", tokenInfo.username, cookie.Value)
+			log.Printf(blue("User `%s` logged out. Token: %s"), tokenInfo.username, cookie.Value)
 			tokens.Delete(cookie.Value)
 		}
 	}

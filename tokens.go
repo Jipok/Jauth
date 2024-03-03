@@ -78,7 +78,7 @@ func newToken(username string, ip string, useragent string) string {
 	}
 	// Store safe to use with goroutines
 	tokens.Store(token, tokenInfo)
-	log.Printf("New token for '%s': %s", username, token)
+	log.Printf(green("New token for '%s'")+": %s", username, token)
 	// Persistent save for each new token
 	go saveTokens()
 	return token
@@ -185,7 +185,7 @@ func loadTokens() error {
 		}
 		_, in_ssh := authorized_keys[username]
 		if !in_tg && !in_ssh {
-			log.Printf("Token for %s revoked as user is no longer registered", username)
+			log.Printf(red("Token for %s revoked as user is no longer registered"), username)
 			continue
 		}
 		tokenInfo = Token_Info{username: username, countdown: countdown, history: history}
@@ -225,7 +225,7 @@ func fullLogOut(username string) {
 		}
 		return true
 	})
-	log.Printf("Revoked all tokens for a user: %s", username)
+	log.Printf(blue("Revoked all tokens for a user: %s"), username)
 }
 
 // Go don't have method to calc len of sync.Map  -_-
