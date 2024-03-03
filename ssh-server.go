@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 	"sync"
 	"time"
 	"unicode"
@@ -76,7 +77,10 @@ func startSshServer() {
 		// Returns an error if the user is not in the `authorized_keys`
 		sshConn, channels, _, err := ssh.NewServerConn(tcpConn, sshConfig)
 		if err != nil {
-			log.Printf("Failed to handshake: %s", err)
+			if cfg.FilterSpam && !strings.Contains(err.Error(), "ssh") {
+				continue
+			}
+			log.Printf("SSH failed to handshake: %s", err)
 			continue
 		}
 
