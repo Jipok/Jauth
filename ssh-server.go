@@ -87,8 +87,7 @@ func startSshServer() {
 
 // Checks if the public key is in `authorized_keys` list
 func publicKeyCallback(sshConn ssh.ConnMetadata, remoteKey ssh.PublicKey) (*ssh.Permissions, error) {
-	log.Printf("Trying to auth: %s (%s) - %s ", sshConn.User(), sshConn.ClientVersion(), sshConn.RemoteAddr())
-
+	log.Printf("Trying to auth: %s (%s::%s) - %s ", sshConn.User(), sshConn.ClientVersion(), remoteKey.Type(), sshConn.RemoteAddr())
 	for username, localKey := range authorized_keys {
 		// Make sure the key types match
 		if remoteKey.Type() != localKey.keyType {
