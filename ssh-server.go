@@ -157,57 +157,65 @@ func handleChannels(sshConn ssh.ServerConn, channels <-chan ssh.NewChannel) {
 		// Typically SSH sessions have out-of-band requests such as "shell", "pty-req" and "env"
 		// In our case, this is used to pass the tokens
 		go func(in <-chan *ssh.Request) {
-			// TODO notify user with wrong token, don't stuck
-			for req := range in {
-				str := string(req.Payload)
-				var sshToken = ""
-				for _, rune := range str {
-					if unicode.IsGraphic(rune) && !unicode.IsSpace(rune) {
-						sshToken += string(rune)
+			for {
+				select {
+				case req := <-in:
+					str := string(req.Payload)
+					var sshToken = ""
+					for _, rune := range str {
+						if unicode.IsGraphic(rune) && !unicode.IsSpace(rune) {
+							sshToken += string(rune)
+						}
 					}
-				}
-				// Need to distinguish the token from other requests (like sendEnv)
-				if (len(sshToken) != 7) || (sshToken[3] != '-') {
-					continue
-				}
-				fmt.Fprintf(channel, "Provided token: %s \n", sshToken)
-				// Lock and write to global var
-				ssh_tokens_mutex.Lock()
-				ssh_tokens[sshToken] = SSH_Token_Info{username: username}
-				ssh_tokens_mutex.Unlock()
-				fmt.Fprint(channel, "Waiting for a request from the browser with this token")
-				for {
-					time.Sleep(100 * time.Millisecond)
-					// Show the user some animation and check the connection at the same time
-					_, err := fmt.Fprint(channel, ".")
-					if err != nil {
-						log.Printf("The SSH connection to user `%s` has been terminated", username)
-						break
+					// Need to distinguish the token from other requests (like sendEnv)
+					if (len(sshToken) != 7) || (sshToken[3] != '-') {
+						continue
 					}
-					// Lock and read from global var
-					ssh_tokens_mutex.RLock()
-					sshTokenInfo := ssh_tokens[sshToken]
-					ssh_tokens_mutex.RUnlock()
-					// When the browser requests a ssh_token check, the handleCheckAuth function
-					// will add information about the browser
-					if sshTokenInfo.browserLink != "" {
-						fmt.Fprintf(channel, "\n") // After dots
-						fmt.Fprintf(channel, green("Access granted!\n"))
-						fmt.Fprintf(channel, "Browser: %s\n", sshTokenInfo.browserAgent)
-						fmt.Fprintf(channel, "IP address: %s\n\n", sshTokenInfo.browserAddr)
-						fmt.Fprintf(channel, "You can share access to this session via the link:\n"+blue("%s\n"), sshTokenInfo.browserLink)
-						break
+					fmt.Fprintf(channel, "Provided token: %s \n", sshToken)
+					// Lock and write to global var
+					ssh_tokens_mutex.Lock()
+					ssh_tokens[sshToken] = SSH_Token_Info{username: username}
+					ssh_tokens_mutex.Unlock()
+					fmt.Fprint(channel, "Waiting for a request from the browser with this token")
+					for {
+						time.Sleep(100 * time.Millisecond)
+						// Show the user some animation and check the connection at the same time
+						_, err := fmt.Fprint(channel, ".")
+						if err != nil {
+							log.Printf("The SSH connection to user `%s` has been terminated", username)
+							break
+						}
+						// Lock and read from global var
+						ssh_tokens_mutex.RLock()
+						sshTokenInfo := ssh_tokens[sshToken]
+						ssh_tokens_mutex.RUnlock()
+						// When the browser requests a ssh_token check, the handleCheckAuth function
+						// will add information about the browser
+						if sshTokenInfo.browserLink != "" {
+							fmt.Fprintf(channel, "\n") // After dots
+							fmt.Fprintf(channel, green("Access granted!\n"))
+							fmt.Fprintf(channel, "Browser: %s\n", sshTokenInfo.browserAgent)
+							fmt.Fprintf(channel, "IP address: %s\n\n", sshTokenInfo.browserAddr)
+							fmt.Fprintf(channel, "You can share access to this session via the link:\n"+blue("%s\n"), sshTokenInfo.browserLink)
+							break
+						}
 					}
+					// Send exit code: 0 - success
+					// 4 zeros because answer must be uint32 (4 bytes)
+					channel.SendRequest("exit-status", false, []byte{0, 0, 0, 0})
+					channel.Close()
+					sshConn.Close()
+					// Lock and modify global var
+					ssh_tokens_mutex.Lock()
+					delete(ssh_tokens, sshToken)
+					ssh_tokens_mutex.Unlock()
+					return
+				case <-time.After(5 * time.Second):
+					fmt.Fprint(channel, red("Timeout: Token not provided\n"))
+					channel.Close()
+					sshConn.Close()
+					return
 				}
-				// Send exit code: 0 - success
-				// 4 zeros because answer must be uint32 (4 bytes)
-				channel.SendRequest("exit-status", false, []byte{0, 0, 0, 0})
-				channel.Close()
-				sshConn.Close()
-				// Lock and modify global var
-				ssh_tokens_mutex.Lock()
-				delete(ssh_tokens, sshToken)
-				ssh_tokens_mutex.Unlock()
 			}
 		}(requests)
 	}
