@@ -49,7 +49,6 @@ func writeIndexPage(w http.ResponseWriter, req *http.Request) {
 	if page == nil {
 		page = domainToLoginPage[""]
 	}
-	w.Header().Add("WWW-Authenticate", "Bearer realm=\"JAuth\"")
 	w.WriteHeader(http.StatusUnauthorized)
 	w.Write(page)
 }
