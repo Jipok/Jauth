@@ -91,13 +91,14 @@ func SSO3(w http.ResponseWriter, req *http.Request) bool {
 		url += parts[1]
 	}
 	// We give the user an authorization token from another domain
-	// TODO no 3th redirect
 	http.SetCookie(w, &http.Cookie{
-		Name:     "jauth_token",
+		Name:     "jauth_LAX_token",
 		Value:    parts[0],
 		HttpOnly: true,
 		Secure:   true,
-		SameSite: http.SameSiteLaxMode, // https://stackoverflow.com/a/71467131
+		// `Lax` is workaround for browser bug: https://stackoverflow.com/a/71467131
+		// This is safe because we will replace cookie with another one with `Strict`
+		SameSite: http.SameSiteLaxMode,
 		Path:     "/",
 	})
 	// Redirect to the user's original page
@@ -156,7 +157,7 @@ func SSO1(w http.ResponseWriter, req *http.Request) bool {
 	// URI can be just one `/`. And this is only option of invalid URI for us.
 	// We do not add it as we will get `//` at the end which will force the
 	// browser to make an additional useless request
-	// if len(req.RequestURI) > 1 {
+	// if len(req.RequestURI) > 1 { TODO
 	target += req.RequestURI
 	// }
 	http.Redirect(w, req, target, http.StatusFound)
@@ -213,8 +214,23 @@ func buildAuthHandler(handler http.Handler) http.Handler {
 		if SSO3(w, req) {
 			return
 		}
-		// Check token
-		cookie, err := req.Cookie("jauth_token")
+		// Single Sign-On. Fix cookie after SSO3
+		cookie, err := req.Cookie("jauth_LAX_token")
+		if err == nil {
+			http.SetCookie(w, &http.Cookie{Name: "jauth_LAX_token", Value: "", MaxAge: -1})
+			http.SetCookie(w,
+				&http.Cookie{
+					Name:     "jauth_token",
+					Value:    cookie.Value,
+					HttpOnly: true,
+					Secure:   true,
+					SameSite: http.SameSiteStrictMode,
+					Path:     "/",
+				})
+		} else {
+			// Check normal token
+			cookie, err = req.Cookie("jauth_token")
+		}
 		if err == nil {
 			token := cookie.Value
 			// Check token
@@ -226,7 +242,7 @@ func buildAuthHandler(handler http.Handler) http.Handler {
 				if SSO2(w, req, token, username) {
 					return
 				}
-				// Check token countdown
+				// Reset token countdown
 				if tokenInfo.countdown < cfg.MaxNonActiveTime {
 					// Not save instantly, since tokensCountdown will save soon anyway
 					tokenInfo.countdown = cfg.MaxNonActiveTime
@@ -256,6 +272,7 @@ func buildAuthHandler(handler http.Handler) http.Handler {
 						}
 					}
 					if !found {
+						log.Printf(yellow("User `%s` tried to access `%s`. Access is restricted by whitelist."), username, req.Host)
 						w.WriteHeader(http.StatusForbidden)
 						fmt.Fprintf(w, NotInWhitelist_PAGE, username, cfg.LogoutURL)
 						return
@@ -348,7 +365,7 @@ func handleTelegramAuth(w http.ResponseWriter, r *http.Request) {
 		username = cfg.TelegramUsers["@"+user["username"]]
 	}
 	if username == "" {
-		log.Printf("The user tried to log in via telegram:\n%s\n\n", dataCheckString)
+		log.Printf(yellow("An unknown user tried to log in via Telegram:\n%s\n\n"), dataCheckString)
 		resp := fmt.Sprintf("<h1 style=\"text-align:center;\">Access denied!<br>Your ID: %s</h1>", user["id"])
 		http.Error(w, resp, http.StatusForbidden)
 		return
@@ -380,7 +397,9 @@ func provideCookieWithNewToken(w http.ResponseWriter, req *http.Request, usernam
 			Value:    token,
 			HttpOnly: true,
 			Secure:   true,
-			SameSite: http.SameSiteLaxMode, // https://stackoverflow.com/a/71467131
+			// This function is only called in places without a redirect (302),
+			// so there is no need to work around a browser bug:  https://stackoverflow.com/a/71467131
+			SameSite: http.SameSiteStrictMode,
 			Path:     "/",
 		})
 	// MaxAge: -1 mean deleting cookie

@@ -92,7 +92,7 @@
   </style>
 </head>
 <body>
-<div class="container"">
+<div class="container">
     <h1>Login</h1>
 	<div class="ssh-login" style="{SSH_DISABLING_CSS}">
 		<p>Execute the command below:</p>
@@ -243,13 +243,33 @@
 		.then(response => response.text())
 		.then(newContent => {
 			if (newContent.includes("true")) {
-				window.location.reload(true);
+				// Browsers have some incredibly stupid bug: https://stackoverflow.com/a/71467131
+				// Although there is not a completely accurate description of the bug. It may seem
+				// that cookies are not sent ONLY immediately after the redirect, but in practice I
+				// found out that this is so. Previously I had a simple `document.location.reload()`
+				// here. And this was the situation with him: after the redirect, the browser got
+				// login page because it didn't sent cookie with `Strict`. But js code above with
+				// fetch for some reason sends cookies. As a result, a crazy situation arises: the 
+				// server sees the request without cookies and returns the login page. The page is
+				// loaded and the js code checks the login, and the server responds true. Then js
+				// refreshes the page, but the browser again does not send cookies. And everything
+				//  repeats itself. Endlessly. You can even use your hands to press F5 or the
+				// “refresh” button, but the browser still does not send cookies and the user will
+				//  see the login page. The only recourse for the user is to copy the URL and open
+				//  it in a new tab. Only then does the browser send cookies.
+				const metaRefresh = document.createElement("meta");
+				metaRefresh.setAttribute("http-equiv", "refresh");
+				metaRefresh.setAttribute("content", "0; url='" + window.location.href + "'");
+				document.head.appendChild(metaRefresh);
 			} else {
-				setTimeout(checkAuth, 1000);
+				setTimeout(checkAuth, 1000); // Check every second
 			}
-		}).catch(function(){window.location.reload(true);});
+		}).catch(function(){document.location.reload();});
 	}
-	setTimeout(checkAuth, 1000);
+	window.onload = function() {
+		checkAuth();
+	}
+	// setTimeout(checkAuth, 1);
 	///////////////////////////////////////////////////////////////////////////
 	function onTelegramAuth(user) {
 		var checkString = user.hash;
