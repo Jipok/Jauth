@@ -76,16 +76,19 @@ var (
 	domains               = map[string]Domain_Info{}
 )
 
-// Next comment will embed `index.html` file into executable during compile time
+// Next comments will embed files into executable during compile time
 //
-//go:embed index.html
-var embed_index_html string
+//go:embed www/index.html
+var embed_index_html []byte
 
-//go:embed NotInWhitelist.html
+//go:embed www/NotInWhitelist.html
 var NotInWhitelist_PAGE string
 
-//go:embed 502.html
+//go:embed www/502.html
 var embed_502_html []byte
+
+//go:embed www/favicon.svg
+var embed_favicon []byte
 
 func main() {
 	// Config filename can be provided via command line

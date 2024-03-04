@@ -27,6 +27,7 @@ func newAuthMux(handler http.Handler) *http.ServeMux {
 	}
 	mux.HandleFunc(cfg.LogoutURL, handleLogout)
 	mux.HandleFunc("/jauth-check", handleCheckAuth)
+	mux.HandleFunc("/jauth-favicon", handleFavicon)
 	// This is necessary to make a closure and forward the reverse proxy to the handler function
 	auth := buildAuthHandler(handler)
 	mux.Handle("/", auth)
@@ -51,6 +52,11 @@ func writeIndexPage(w http.ResponseWriter, req *http.Request) {
 	}
 	w.WriteHeader(http.StatusUnauthorized)
 	w.Write(page)
+}
+
+func handleFavicon(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "image/svg+xml")
+	w.Write(embed_favicon)
 }
 
 // Handler of cfg.LogoutURL

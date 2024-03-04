@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+
+<svg
+   viewBox="0 0 600 600"
+   version="1.1"
+   id="svg9724"
+   sodipodi:docname="shield-svgrepo-com.svg"
+   inkscape:version="1.2.2 (1:1.2.2+202212051550+b0a8486541)"
+   width="600"
+   height="600"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs9728" />
+  <sodipodi:namedview
+     id="namedview9726"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="true"
+     inkscape:zoom="0.59480855"
+     inkscape:cx="-71.451562"
+     inkscape:cy="490.07365"
+     inkscape:window-width="1920"
+     inkscape:window-height="1009"
+     inkscape:window-x="0"
+     inkscape:window-y="1080"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg9724"
+     showguides="true">
+    <inkscape:grid
+       type="xygrid"
+       id="grid9972"
+       originx="0"
+       originy="0"
+       spacingy="1"
+       spacingx="1"
+       units="px"
+       visible="true" />
+    <sodipodi:guide
+       position="-260,300"
+       orientation="0,-1"
+       id="guide383"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="300,520"
+       orientation="1,0"
+       id="guide385"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="-20,485"
+       orientation="0,-1"
+       id="guide939"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="220,80"
+       orientation="0,-1"
+       id="guide941"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <path
+     style="color:#000000;fill:#000000;stroke-linecap:round;stroke-linejoin:round;-inkscape-stroke:none"
+     d="M 306.69922,0.56640625 A 40.004,40.004 0 0 0 277.99219,6.5976562 C 204.79182,54.825771 125.81459,72.88975 38.791016,75.519531 A 40.004,40.004 0 0 0 0,115.5 v 220.50195 a 40.004,40.004 0 0 0 1.3710937,10.38086 C 39.09458,486.73938 151.61272,564.6318 290.42969,598.83789 a 40.004,40.004 0 0 0 22.10937,-0.85352 c 84.5282,-27.90596 150.60818,-61.57843 199.21485,-103.8164 48.60666,-42.23797 79.13088,-94.46851 87.80273,-152.22852 A 40.004,40.004 0 0 0 600,336.00195 V 115.5 A 40.004,40.004 0 0 0 561.00391,75.513672 C 475.04087,73.353443 395.63751,51.070433 320.69141,5.7675781 A 40.004,40.004 0 0 0 306.69922,0.56640625 Z M 300.76172,86.511719 C 369.7741,124.31081 443.38143,146.24652 520,153.20703 v 179.13086 c -6.15426,37.49888 -24.30727,69.80465 -60.71875,101.44531 -35.35808,30.72528 -88.64495,59.51581 -160.88281,84.41602 C 183.69467,487.81295 109.69559,434.29108 80,330.10352 V 153.25195 c 75.9078,-6.41545 150.6825,-25.7363 220.76172,-66.740231 z"
+     id="path407" />
+  <path
+     style="color:#000000;fill:#000000;stroke-linecap:round;stroke-linejoin:round;-inkscape-stroke:none"
+     d="m 400.41602,198.78906 a 40,40 0 0 0 -28.4043,11.41992 L 275,305.22461 227.98828,259.17969 a 40,40 0 0 0 -56.56445,0.58984 40,40 0 0 0 0.58789,56.56445 l 75,73.45704 a 40.004,40.004 0 0 0 55.97656,0 l 125,-122.42774 a 40,40 0 0 0 0.58789,-56.56445 40,40 0 0 0 -28.16015,-12.00977 z"
+     id="path1060" />
+</svg>
