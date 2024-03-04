@@ -129,7 +129,7 @@ func startWebServer() {
 		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 			log.Printf(yellow("User can't access https://%s - ")+"%s", r.Host, err)
-			w.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(http.StatusBadGateway)
 			w.Write(embed_502_html)
 		},
 	}

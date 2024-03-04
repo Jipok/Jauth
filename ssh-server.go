@@ -116,7 +116,7 @@ func publicKeyCallback(sshConn ssh.ConnMetadata, remoteKey ssh.PublicKey) (*ssh.
 		}
 		// Now we know user
 		sshAddrToUsername.Store(sshConn.RemoteAddr().String(), username)
-		log.Printf("Public key math: %s", username)
+		log.Printf("Public key match: %s", username)
 		return nil, nil
 	}
 	return nil, errors.New("not authorized key")
