@@ -153,12 +153,7 @@ func SSO1(w http.ResponseWriter, req *http.Request) bool {
 	// browser's point of view we just changed the path at the beginning.
 	target := "https://" + domains[req.Host].LoginFrom + "/jauth-sso/"
 	target += req.Host
-	// URI can be just one `/`. And this is only option of invalid URI for us.
-	// We do not add it as we will get `//` at the end which will force the
-	// browser to make an additional useless request
-	// if len(req.RequestURI) > 1 { TODO
 	target += req.RequestURI
-	// }
 	http.Redirect(w, req, target, http.StatusFound)
 	return true
 }
