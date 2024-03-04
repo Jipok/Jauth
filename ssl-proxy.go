@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net/http"
@@ -167,9 +168,11 @@ func startWebServer() {
 			HostPolicy: autocert.HostWhitelist(domains...),
 			Email:      cfg.Certificate.Email,
 		}
+		c := m.TLSConfig()
+		c.MinVersion = tls.VersionTLS12
 		s := &http.Server{
 			Addr:      address,
-			TLSConfig: m.TLSConfig(),
+			TLSConfig: c,
 			Handler:   mux,
 			ErrorLog:  newServerErrorLog(),
 		}
