@@ -121,6 +121,8 @@ SSO = ""
     Type = "manual" # Default self-signed
 	Cert = "some-cert.crt" # Default "self-signed.crt"
 	Key = "some-cert.key" # Default "self-signed.key"
+    # Used by Let's Encrypt to notify about problems with issued certificates
+    Email = ""
 
 [[Domains]]
     # Must not be empty

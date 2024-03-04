@@ -40,7 +40,7 @@ type Config struct {
 	}
 	Certificate struct {
 		Type  string
-		Email string // TODO
+		Email string
 		Cert  string
 		Key   string
 	}

@@ -165,6 +165,7 @@ func startWebServer() {
 			Cache:      autocert.DirCache(AUTOCERT_DIR_CACHE),
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: autocert.HostWhitelist(domains...),
+			Email:      cfg.Certificate.Email,
 		}
 		s := &http.Server{
 			Addr:      address,
