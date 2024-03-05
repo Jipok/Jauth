@@ -183,7 +183,13 @@ func loadTokens() error {
 				in_tg = true
 			}
 		}
-		_, in_ssh := authorized_keys[username]
+		in_ssh := false
+		for _, sshInfo := range authorized_keys {
+			if sshInfo.username == username {
+				in_ssh = true
+				break
+			}
+		}
 		if !in_tg && !in_ssh {
 			log.Printf(red("Token for %s revoked as user is no longer registered"), username)
 			continue

@@ -62,14 +62,14 @@ type Config struct {
 var cfg Config
 
 type SSH_Info struct {
-	keyType string
-	keyData []byte
-	session []byte
+	keyType  string
+	keyData  []byte
+	username string
 }
 
 var (
 	telegramWidgetEnabled = false
-	authorized_keys       = map[string]SSH_Info{}
+	authorized_keys       = []SSH_Info{}
 	domainToTokenSHA256   = map[string][]byte{}
 	domainToLoginPage     = map[string][]byte{} // gzip
 	domainNoAuth          = map[string]bool{}

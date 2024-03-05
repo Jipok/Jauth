@@ -16,15 +16,6 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-/*
-This global variable is only used in two methods: publicKeyCallback, handleChannels.
-Such a workaround is needed because there is no way to find out what public key
-the user has when processing channels (the token is passed there). Although SSH
-provides the User value, it cannot be changed and is passed from the user side.
-And we need the ability to assign any username for the key
-*/
-var sshAddrToUsername sync.Map
-
 // Tokens that the browser generates and the user passes to us
 var (
 	ssh_tokens       = map[string]SSH_Token_Info{}
@@ -92,7 +83,8 @@ func startSshServer() {
 // Checks if the public key is in `authorized_keys` list
 func publicKeyCallback(sshConn ssh.ConnMetadata, remoteKey ssh.PublicKey) (*ssh.Permissions, error) {
 	log.Printf("Trying to auth: %s (%s::%s) - %s ", sshConn.User(), sshConn.ClientVersion(), remoteKey.Type(), sshConn.RemoteAddr())
-	for username, localKey := range authorized_keys {
+	// TODO Do not show knowledge of public keys, somehow require the client to confirm the private key
+	for _, localKey := range authorized_keys {
 		// Make sure the key types match
 		if remoteKey.Type() != localKey.keyType {
 			continue
@@ -115,11 +107,13 @@ func publicKeyCallback(sshConn ssh.ConnMetadata, remoteKey ssh.PublicKey) (*ssh.
 			continue
 		}
 		// Now we know user
-		sshAddrToUsername.Store(sshConn.RemoteAddr().String(), username)
-		log.Printf("Public key match: %s", username)
-		return nil, nil
+		log.Printf("Public key match: %s", localKey.username)
+		// TODO can client send Extensions?
+		perm := ssh.Permissions{Extensions: make(map[string]string)}
+		perm.Extensions["username"] = localKey.username
+		return &perm, nil
 	}
-	return nil, errors.New("not authorized key")
+	return nil, errors.New(yellow("not authorized key"))
 }
 
 // This is called for already authenticated(via publicKeyCallback) users
@@ -138,20 +132,8 @@ func handleChannels(sshConn ssh.ServerConn, channels <-chan ssh.NewChannel) {
 			log.Printf("could not accept channel (%s)", err)
 			continue
 		}
-
 		// Get the previously(in publicKeyCallback) saved username
-		addr := sshConn.RemoteAddr().String()
-		tmp, ok := sshAddrToUsername.Load(addr)
-		// It shouldn't be possible. But we'll be safe
-		if !ok {
-			channel.Close()
-		}
-		// Deletion is not necessary for security, because even if user logs in
-		// under a different name from same address, value in `map` will change.
-		// And the call to this method always occurs after checking public key.
-		// Just saves some memory
-		sshAddrToUsername.Delete(addr)
-		username := tmp.(string)
+		username := sshConn.Permissions.Extensions["username"]
 		fmt.Fprintf(channel, "Authenticated username: %s \n", username)
 
 		// Typically SSH sessions have out-of-band requests such as "shell", "pty-req" and "env"
@@ -182,7 +164,7 @@ func handleChannels(sshConn ssh.ServerConn, channels <-chan ssh.NewChannel) {
 						// Show the user some animation and check the connection at the same time
 						_, err := fmt.Fprint(channel, ".")
 						if err != nil {
-							log.Printf("The SSH connection to user `%s` has been terminated", username)
+							log.Printf(yellow("The SSH connection to user `%s` has been terminated"), username)
 							break
 						}
 						// Lock and read from global var
@@ -237,7 +219,10 @@ func loadAuthorizedKeys(filename string) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			authorized_keys[name] = SSH_Info{key.Type(), key.Marshal(), nil}
+			authorized_keys = append(authorized_keys, SSH_Info{
+				keyType:  key.Type(),
+				keyData:  key.Marshal(),
+				username: name})
 		}
 	} else {
 		log.Fatalf("SSH: Can't open %s", filename)
