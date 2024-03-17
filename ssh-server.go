@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -39,15 +41,19 @@ func startSshServer() {
 	// Read server keys
 	privateBytes, err := ioutil.ReadFile(cfg.SSH.ServerKey)
 	if err != nil {
-		log.Printf("Failed to load SSH server private key: %s", cfg.SSH.ServerKey)
-		log.Print("You can generate new keys with ", green("`ssh-keygen`"))
+		log.Printf(red("Failed to load SSH server private key: %s :: ")+err.Error(), cfg.SSH.ServerKey)
+		log.Fatal("You can generate new keys with ", green("`ssh-keygen`"))
 	}
 	// Parse
-	private, err := ssh.ParsePrivateKey(privateBytes)
+	signer, err := ssh.ParsePrivateKey(privateBytes)
 	if err != nil {
-		log.Fatal("Failed to parse SSH server private key")
+		log.Fatal(red("Failed to parse SSH server private key: ") + err.Error())
 	}
-	sshConfig.AddHostKey(private)
+	sshConfig.AddHostKey(signer)
+	// Print fingerprint in OpenSSH style
+	fingerprint := sha256.Sum256(signer.PublicKey().Marshal())
+	fingerprintBase64 := base64.StdEncoding.EncodeToString(fingerprint[:])
+	log.Print("SSH key fingerprint is SHA256:" + blue(fingerprintBase64))
 
 	// Once a ServerConfig has been configured, connections can be accepted.
 	address := cfg.Listen + ":" + cfg.SSH.Port
