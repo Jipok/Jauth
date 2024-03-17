@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-go build -ldflags "-s -w" && upx jauth
+CGO_ENABLED=0 go build -ldflags "-s -w" && upx jauth

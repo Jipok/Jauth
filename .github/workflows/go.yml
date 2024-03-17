@@ -18,7 +18,7 @@ jobs:
 
       - run: go test ./...
 
-      - run: go build -ldflags "-s -w"  -o jauth
+      - run: CGO_ENABLED=0 go build -ldflags "-s -w"  -o jauth
       - run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-s -w" -o jauth_arm64
 
       - name: Run UPX
