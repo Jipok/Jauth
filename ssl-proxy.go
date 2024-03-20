@@ -139,7 +139,7 @@ func startWebServer() {
 
 	// Listen http on 80 port and redirect all incoming to https
 	if cfg.RedirectHTTP {
-		log.Println("Redirecting http(:80) requests to https(:443)")
+		log.Printf("Redirecting http(%s:80) requests to https \n", cfg.Listen)
 		redirectTLS := func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "https://"+r.Host+r.RequestURI, http.StatusMovedPermanently)
 		}
@@ -158,7 +158,7 @@ func startWebServer() {
 	}
 
 	var err error
-	address := cfg.Listen + ":443"
+	address := cfg.Listen + ":" + cfg.HttpsPort
 	log.Printf("Web server is listening: %s", address)
 	if cfg.Certificate.Type == "autocert" {
 		// For some reason LetsEncrypt seems to only work on :443

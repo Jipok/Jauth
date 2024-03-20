@@ -92,8 +92,9 @@ FilterSpam = true
 # If true will drop privileges if started from root. 
 # Will not be able to save state(tokens) between restarts.
 DropPrivileges = false 
-# Interface to listen
+# Interface to listen(for ssh, http, https servers)
 Listen = "0.0.0.0"
+HttpsPort = "443"
 # Start server on 80 port that will redirect all to 443 port
 RedirectHTTP = true
 # Time (in hours) after which an inactive session will be logged out.

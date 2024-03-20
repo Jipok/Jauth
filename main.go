@@ -46,7 +46,8 @@ type Config struct {
 	}
 	FilterSpam       bool
 	DropPrivileges   bool
-	Listen           string // Interface to listen
+	Listen           string
+	HttpsPort        string
 	DefaultTarget    string
 	RedirectHTTP     bool
 	MaxNonActiveTime int
@@ -110,7 +111,8 @@ func main() {
 	cfg.DefaultTarget = "8080"
 	cfg.FilterSpam = true      // Less spam like `http: TLS handshake error...`
 	cfg.DropPrivileges = false // Drop privileges if started from root
-	cfg.Listen = "0.0.0.0"
+	cfg.Listen = "0.0.0.0"     // Interface to listen
+	cfg.HttpsPort = "443"
 	cfg.RedirectHTTP = true   // Start server on 80 port that will redirect all to 443 port
 	cfg.MaxNonActiveTime = 30 // TOKEN_COUNTDOWN_TIMER
 	cfg.LogoutURL = "/jauth-logout"
