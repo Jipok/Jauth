@@ -66,6 +66,8 @@ func handleLogout(w http.ResponseWriter, req *http.Request) {
 			tokenInfo := tmp.(Token_Info)
 			log.Printf(blue("User `%s` logged out. Token: %s"), tokenInfo.username, cookie.Value)
 			tokens.Delete(cookie.Value)
+			// Important information, save now
+			go saveTokens()
 		}
 	}
 	// MaxAge: -1 mean deleting cookie
@@ -248,13 +250,14 @@ func buildAuthHandler(handler http.Handler) http.Handler {
 				}
 				// Check useragent and IP address change
 				ip := strings.Split(req.RemoteAddr, ":")[0]
-				lastEntry := tokenInfo.history[len(tokenInfo.history)-1]
-				if (lastEntry.ip != ip) || (lastEntry.useragent != req.UserAgent()) {
-					tokenInfo.history = append(tokenInfo.history, Token_Usage_History{
+				history_key := ip + " " + req.UserAgent()
+				_, history_found := tokenInfo.history[history_key]
+				if !history_found {
+					tokenInfo.history[history_key] = Token_Usage_History{
 						time:      time.Now().Unix(),
 						ip:        ip,
 						useragent: req.UserAgent(),
-					})
+					}
 					tokens.Store(token, tokenInfo)
 					// Important information, save now
 					go saveTokens()

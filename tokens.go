@@ -17,11 +17,11 @@ type Token_Info struct {
 	// Updated to the maximum(cfg.MaxNonActiveTime) value on any use of the token
 	countdown int
 	username  string
-	history   []Token_Usage_History
+	history   map[string]Token_Usage_History
 }
 
 type Token_Usage_History struct {
-	time      int64
+	time      int64 // First usage
 	ip        string
 	useragent string
 }
@@ -70,7 +70,8 @@ func newToken(username string, ip string, useragent string) string {
 		ip:        ip,
 		useragent: useragent,
 	}
-	history := []Token_Usage_History{hEntry}
+	history_key := ip + " " + useragent
+	history := map[string]Token_Usage_History{history_key: hEntry}
 	tokenInfo := Token_Info{
 		username:  username,
 		countdown: cfg.MaxNonActiveTime,
@@ -158,7 +159,7 @@ func loadTokens() error {
 			log.Fatal(err)
 		}
 		// Parse token history. Each entry starts with tab
-		history := []Token_Usage_History{}
+		history := map[string]Token_Usage_History{}
 		var hEntry Token_Usage_History
 		for (i+1 < len(lines)) && (len(lines[i+1]) > 0) && (lines[i+1][0] == '\t') {
 			i += 1
@@ -174,7 +175,8 @@ func loadTokens() error {
 			}
 			hEntry.ip = parts[2]
 			hEntry.useragent = parts[3]
-			history = append(history, hEntry)
+			history_key := hEntry.ip + " " + hEntry.useragent
+			history[history_key] = hEntry
 		}
 		// Drop token for deleted user
 		in_tg := false
