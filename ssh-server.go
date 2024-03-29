@@ -74,6 +74,8 @@ func startSshServer() {
 		// Returns an error if the user is not in the `authorized_keys`
 		sshConn, channels, _, err := ssh.NewServerConn(tcpConn, sshConfig)
 		if err != nil {
+			// TODO Filter it
+			// SSH failed to handshake: ssh: no common algorithm for host key; client offered: [sk-ecdsa-sha2-nistp256@openssh.com], server offered: [rsa-sha2-256 rsa-sha2-512 ssh-rsa]
 			if cfg.FilterSpam && !strings.Contains(err.Error(), "ssh") {
 				continue
 			}
@@ -210,27 +212,29 @@ func handleChannels(sshConn ssh.ServerConn, channels <-chan ssh.NewChannel) {
 }
 
 // Load `filename` as authorized_keys
-func loadAuthorizedKeys(filename string) {
+func loadAuthorizedKeys(filename string) []string {
+	var newUsers []string
 	// Parse file
 	file, err := os.Open(filename)
-	if err == nil {
-		defer file.Close()
-		// Read line by line
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			if len(scanner.Text()) < 2 {
-				continue
-			}
-			key, name, _, _, err := ssh.ParseAuthorizedKey(scanner.Bytes())
-			if err != nil {
-				log.Fatal(err)
-			}
-			authorized_keys = append(authorized_keys, SSH_Info{
-				keyType:  key.Type(),
-				keyData:  key.Marshal(),
-				username: name})
-		}
-	} else {
-		log.Fatalf("SSH: Can't open %s", filename)
+	if err != nil {
+		log.Fatalf("Can't open authorized_keys: %s", filename)
 	}
+	defer file.Close()
+	// Read line by line
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		if len(scanner.Text()) < 2 {
+			continue
+		}
+		key, name, _, _, err := ssh.ParseAuthorizedKey(scanner.Bytes())
+		if err != nil {
+			log.Fatal(err)
+		}
+		authorized_keys = append(authorized_keys, SSH_Info{
+			keyType:  key.Type(),
+			keyData:  key.Marshal(),
+			username: name})
+		newUsers = append(newUsers, name)
+	}
+	return newUsers
 }

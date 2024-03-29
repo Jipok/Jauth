@@ -29,6 +29,8 @@ type Domain_Info struct {
 	Whitelist      []string
 	LoginFrom      string
 	NoAuth         bool
+	TelegramUsers  map[string]string
+	AuthorizedKeys string
 }
 
 type Config struct {
@@ -70,6 +72,7 @@ type SSH_Info struct {
 
 var (
 	telegramWidgetEnabled = false
+	defaultWhitelist      []string
 	authorized_keys       = []SSH_Info{}
 	domainToTokenSHA256   = map[string][]byte{}
 	domainToLoginPage     = map[string][]byte{} // gzip
@@ -132,22 +135,13 @@ func main() {
 	cfg.SSH.AuthorizedKeys = expandTilde(cfg.SSH.AuthorizedKeys)
 	cfg.Certificate.Cert = expandTilde(cfg.Certificate.Cert)
 	cfg.Certificate.Key = expandTilde(cfg.Certificate.Key)
-	// Replace empty telegram usernames
-	for telegram_name, our_name := range cfg.TelegramUsers {
-		if our_name == "" {
-			our_name, _ = strings.CutPrefix(telegram_name, "@")
-			cfg.TelegramUsers[telegram_name] = our_name
-		}
+	// Load default authorized_keys
+	if cfg.SSH.Enabled && cfg.SSH.AuthorizedKeys != "" {
+		defaultWhitelist = loadAuthorizedKeys(cfg.SSH.AuthorizedKeys)
 	}
-
-	// Load authorized_keys
-	if cfg.SSH.Enabled {
-		loadAuthorizedKeys(cfg.SSH.AuthorizedKeys)
-		if len(authorized_keys) == 0 {
-			log.Printf("Zero authorized keys. SSH server will no start")
-			cfg.SSH.Enabled = false
-		}
-	}
+	defaultWhitelist = append(defaultWhitelist, handleTelegramUsers(cfg.TelegramUsers)...)
+	defaultWhitelist = removeDuplicates(defaultWhitelist)
+	log.Printf("Default WhiteList: %s", strings.Join(defaultWhitelist, ", "))
 
 	// Load login page. There is a built-in and the user can provide his own
 	raw_index_page := []byte(embed_index_html)
@@ -167,13 +161,21 @@ func main() {
 		// Also for Domain_Info declared just above
 		if domain.Target == "" {
 			domain.Target = cfg.DefaultTarget
-			cfg.Domains[i] = domain
+		}
+		// "Register" per domain TelegramUsers and SshKeys
+		newUsers := handleTelegramUsers(domain.TelegramUsers)
+		if domain.AuthorizedKeys != "" {
+			newUsers = append(newUsers, loadAuthorizedKeys(expandTilde(domain.AuthorizedKeys))...)
+		}
+		// Fill empty whitelist with default and per domain values
+		if len(domain.Whitelist) == 0 {
+			domain.Whitelist = newUsers
+			domain.Whitelist = append(domain.Whitelist, defaultWhitelist...)
 		}
 		// Each domain can be configured to sign in through a different domain
 		// Otherwise use Single Sign-On url
 		if (domain.LoginFrom == "") && (domain.Domain != cfg.SSO) {
 			domain.LoginFrom = cfg.SSO
-			cfg.Domains[i] = domain
 		}
 		// Calc key for HMAC. Need for verification telegram widget auth
 		if domain.WidgetBotToken != "" {
@@ -216,6 +218,12 @@ func main() {
 		domainNoAuth[domain.Domain] = domain.NoAuth
 		// For easy lookup without loops
 		domains[domain.Domain] = domain
+		cfg.Domains[i] = domain
+	}
+
+	if cfg.SSH.Enabled && len(authorized_keys) == 0 {
+		log.Print(yellow("Zero authorized keys. SSH server will no start"))
+		cfg.SSH.Enabled = false
 	}
 
 	// Load tokens for authorized users
@@ -273,4 +281,32 @@ func expandTilde(path string) string {
 		return filepath.Join(user_dir, path[2:])
 	}
 	return path
+}
+
+func handleTelegramUsers(telegramUsers map[string]string) []string {
+	var newUsers []string
+	for telegram_name, jauth_name := range telegramUsers {
+		// Replaces
+		// 		"@Jipok" = ""
+		// To
+		//		"@Jipok" = "Jipok"
+		if jauth_name == "" {
+			jauth_name, _ = strings.CutPrefix(telegram_name, "@")
+			cfg.TelegramUsers[telegram_name] = jauth_name
+		}
+		newUsers = append(newUsers, jauth_name)
+	}
+	return newUsers
+}
+
+func removeDuplicates(slice []string) []string {
+	keys := make(map[string]bool)
+	list := []string{}
+	for _, entry := range slice {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
 }

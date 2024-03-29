@@ -132,9 +132,6 @@ SSO = ""
     target = ""
     # Some applications use e-mail for identification
     UserSuffix = ""
-    # List of users who will be allowed to use site. 
-    # The rest will get NotInWhitelist.html
-    Whitelist = []
     # If empty, then the telegram login widget will be hidden
     WidgetBotName = ""
     WidgetBotToken = ""
@@ -146,6 +143,14 @@ SSO = ""
     LoginFrom = ""
     # If true, authorization will be disabled. Jauth will act as ssl-proxy
     NoAuth = false
+    # List of users who will be allowed to use site. 
+    # The rest will get NotInWhitelist.html
+    # If empty, then defaults TelegramUsers+Authorized_keys and values bellow will be used
+    Whitelist = []
+    # Same format as for SSH.AuthorizedKeys, but this ones will be added only to this domain whitelist
+    AuthorizedKeys = ""
+    # Same format as for default TelegramUsers, but this ones will be added only to this domain whitelist
+    TelegramUsers = {"@PerDomainUser" = ""}
 ```
 
 # Thanks to

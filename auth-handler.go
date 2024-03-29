@@ -41,9 +41,7 @@ func writeIndexPage(w http.ResponseWriter, req *http.Request) {
 	// And this saves us from implementing a bunch of logic
 	w.Header().Add("Content-Encoding", "gzip")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	// Unfortunately, there are (at the time of 2023) browsers that do not show
-	// the content of the page if they receive a 407 error
-	// w.WriteHeader(http.StatusProxyAuthRequired)
+
 	page := domainToLoginPage[req.Host]
 	// Following is needed for unspecified domains in `manual` and `self-signed` modes
 	// It will also be used if client requested without a domain(by ip address)
