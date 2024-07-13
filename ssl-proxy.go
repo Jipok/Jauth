@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/klauspost/compress/gzhttp"
 	"github.com/suyashkumar/ssl-proxy/gen"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -109,14 +110,22 @@ func startWebServer() {
 		} else {
 			domains = append(domains, d.Domain)
 		}
+		// TODO Подсвечивать дубликаты портов
 		log.Printf(green("Proxying from https://%s to %s"), d.Domain, toURL)
 	}
 	if cfg.Certificate.Type == "autocert" {
 		log.Print("With autocert using HostWhitelist: ", strings.Join(domains, ", "))
 	}
 
+	// TODO Is possible add http/2 support?
+	// transport := &http.Transport{
+	// ForceAttemptHTTP2: true,
+	// }
+	// http2.ConfigureTransport(transport)
+
 	// Setup reverse proxy
-	proxy := &httputil.ReverseProxy{
+	var proxy http.Handler = &httputil.ReverseProxy{
+		// Transport: transport,
 		Rewrite: func(r *httputil.ProxyRequest) {
 			// Use default target(with empty domain) for everything we don't know how to redirect
 			target := toURLs[r.In.Host]
@@ -133,6 +142,14 @@ func startWebServer() {
 			w.WriteHeader(http.StatusBadGateway)
 			w.Write(embed_502_html)
 		},
+	}
+
+	if cfg.Gzip {
+		wrapper, err := gzhttp.NewWrapper(gzhttp.KeepAcceptRanges())
+		if err != nil {
+			log.Fatalf("Unable to create gzip wrapper: %s", err)
+		}
+		proxy = wrapper(proxy)
 	}
 	// See auth-handler.go
 	mux := newAuthMux(proxy)

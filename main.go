@@ -47,6 +47,7 @@ type Config struct {
 		Key   string
 	}
 	FilterSpam       bool
+	Gzip             bool
 	DropPrivileges   bool
 	Listen           string
 	HttpsPort        string
@@ -113,6 +114,7 @@ func main() {
 	cfg.Certificate.Type = "self-signed"
 	cfg.DefaultTarget = "8080"
 	cfg.FilterSpam = true      // Less spam like `http: TLS handshake error...`
+	cfg.Gzip = true            // Enable gzip'ing the responses
 	cfg.DropPrivileges = false // Drop privileges if started from root
 	cfg.Listen = "0.0.0.0"     // Interface to listen
 	cfg.HttpsPort = "443"
