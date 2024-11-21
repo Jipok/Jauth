@@ -100,6 +100,10 @@
 		transform: scale(0.98);
 	}
 
+	.copy-btn svg path {
+		fill: var(--text-color);
+	}
+
 	/* Copy animation */
 	@keyframes checkmark {
 		0% { transform: scale(1); }
@@ -132,10 +136,6 @@
 
 	.github-link svg path {
 		fill: var(--text-color);
-	}
-
-	.copy-btn svg path {
-		fill: var(--text-color); /* Это заставит SVG использовать цвет текста */
 	}
 
   </style>
@@ -252,23 +252,12 @@
 
 	var ssh_token = getCookie("jauth_ssh_token");
 	if (ssh_token == "") {
-		ssh_token = "" 
-		var array = new Uint32Array(10);
-		var long = ""
-		window.crypto.getRandomValues(array);
-		// Length is checked on the server side. Need for ssh-server to
+		var array = new Uint32Array(7)
+		window.crypto.getRandomValues(array)
+		const digits = array[0].toString().slice(0, 7)
+		// Length and dash is checked on the server side. Need for ssh-server to
 		// distinguish the token from other requests (like sendEnv)
-		for (let i = 0; i < 7; i++) {
-			long += array[i].toString(10)
-		}
-		for (let i = 0; i < 7; i++) {
-			if (i == 3) {
-				// Dash is also checked on the server side
-				ssh_token += '-'
-			} else {
-				ssh_token += long[i]
-			}
-		}
+		ssh_token = digits.slice(0, 3) + '-' + digits.slice(3, 6)
 		setCookie("jauth_ssh_token", ssh_token);
 	}
 
