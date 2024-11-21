@@ -1,7 +1,7 @@
 # Jauth
 Jauth is a lightweight SSL/TLS reverse proxy with authorization. Great for protect your self-hosted applications. Moreover, it offers SSO for simpler login management.
 
-![Login screenshot](screenshot.png?raw=true)
+![screenshot](screenshot2.png?raw=true)
 
 # Features
 * Single binary executable with no dependencies

@@ -285,6 +285,7 @@ func buildAuthHandler(handler http.Handler) http.Handler {
 				req.Header.Set("Remote-User", username)
 				req.Header.Set("X-Forwarded-User", username)
 				// Passing the modified request to the reverse proxy
+				// TODO m.b. delete jauth_token cookie for security?
 				handler.ServeHTTP(w, req)
 				return
 			}
