@@ -11,20 +11,13 @@ import (
 	"net"
 	"os"
 	"strings"
-	"sync"
 	"time"
 	"unicode"
 
 	"golang.org/x/crypto/ssh"
 )
 
-// Tokens that the browser generates and the user passes to us
-var (
-	ssh_tokens       = map[string]SSH_Token_Info{}
-	ssh_tokens_mutex sync.RWMutex
-)
-
-type SSH_Token_Info struct {
+type SSH_TokenInfo struct {
 	// These and ssh_token are provided by ssh
 	username string
 	// These are provided for ssh back
@@ -164,7 +157,7 @@ func handleChannels(sshConn ssh.ServerConn, channels <-chan ssh.NewChannel) {
 					fmt.Fprintf(channel, "Provided token: %s \n", sshToken)
 					// Lock and write to global var
 					ssh_tokens_mutex.Lock()
-					ssh_tokens[sshToken] = SSH_Token_Info{username: username}
+					ssh_tokens[sshToken] = SSH_TokenInfo{username: username}
 					ssh_tokens_mutex.Unlock()
 					fmt.Fprint(channel, "Waiting for a request from the browser with this token")
 					for {

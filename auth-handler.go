@@ -63,7 +63,7 @@ func handleLogout(w http.ResponseWriter, req *http.Request) {
 	if err == nil {
 		tmp, in_tokens := tokens.Load(cookie.Value)
 		if in_tokens {
-			tokenInfo := tmp.(Token_Info)
+			tokenInfo := tmp.(TokenInfo)
 			log.Printf(blue("User `%s` logged out. Token: %s"), tokenInfo.username, cookie.Value)
 			tokens.Delete(cookie.Value)
 			// Important information, save now
@@ -236,7 +236,7 @@ func buildAuthHandler(handler http.Handler) http.Handler {
 			// Check token
 			tmp, in_tokens := tokens.Load(token)
 			if in_tokens {
-				tokenInfo := tmp.(Token_Info)
+				tokenInfo := tmp.(TokenInfo)
 				username := tokenInfo.username
 				// Single Sign-On. Second step
 				if SSO2(w, req, token, username) {
@@ -253,7 +253,7 @@ func buildAuthHandler(handler http.Handler) http.Handler {
 				history_key := ip + " " + req.UserAgent()
 				_, history_found := tokenInfo.history[history_key]
 				if !history_found {
-					tokenInfo.history[history_key] = Token_Usage_History{
+					tokenInfo.history[history_key] = TokenUsageHistory{
 						time:      time.Now().Unix(),
 						ip:        ip,
 						useragent: req.UserAgent(),

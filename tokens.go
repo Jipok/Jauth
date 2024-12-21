@@ -8,19 +8,18 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
-type Token_Info struct {
+type TokenInfo struct {
 	// This counter shows how many TOKEN_COUNTDOWN_TIMER are left before the token is revoked
 	// Updated to the maximum(cfg.MaxNonActiveTime) value on any use of the token
 	countdown int
 	username  string
-	history   map[string]Token_Usage_History
+	history   map[string]TokenUsageHistory
 }
 
-type Token_Usage_History struct {
+type TokenUsageHistory struct {
 	time      int64 // First usage
 	ip        string
 	useragent string
@@ -30,11 +29,6 @@ const (
 	TOKEN_LENGTH          = 24
 	TOKEN_COUNTDOWN_TIMER = time.Hour
 	TOKENS_FILE           = "jauth-tokens.txt"
-)
-
-var (
-	tokens          sync.Map
-	SaveTokensMutex sync.Mutex
 )
 
 // GenerateRandomString returns a securely generated random string.
@@ -65,14 +59,14 @@ func newToken(username string, ip string, useragent string) string {
 	if in_tokens {
 		return newToken(username, ip, useragent)
 	}
-	hEntry := Token_Usage_History{
+	hEntry := TokenUsageHistory{
 		time:      time.Now().Unix(),
 		ip:        ip,
 		useragent: useragent,
 	}
 	history_key := ip + " " + useragent
-	history := map[string]Token_Usage_History{history_key: hEntry}
-	tokenInfo := Token_Info{
+	history := map[string]TokenUsageHistory{history_key: hEntry}
+	tokenInfo := TokenInfo{
 		username:  username,
 		countdown: cfg.MaxNonActiveTime,
 		history:   history,
@@ -100,7 +94,7 @@ func saveTokens() {
 	}
 	tokens.Range(func(tokenPointer, tokenInfoPointer interface{}) bool {
 		// Information about the token takes one line and is separated by tabs
-		tokenInfo := tokenInfoPointer.(Token_Info)
+		tokenInfo := tokenInfoPointer.(TokenInfo)
 		p1 := tokenPointer.(string)
 		p2 := strconv.Itoa(tokenInfo.countdown)
 		p3 := tokenInfo.username
@@ -139,7 +133,7 @@ func loadTokens() error {
 	if err != nil {
 		return err
 	}
-	var tokenInfo Token_Info
+	var tokenInfo TokenInfo
 	lines := strings.Split(string(tokens_data), "\n")
 	// Each line contains one Token_Info
 	for i := 0; i < len(lines); i++ {
@@ -159,8 +153,8 @@ func loadTokens() error {
 			log.Fatal(err)
 		}
 		// Parse token history. Each entry starts with tab
-		history := map[string]Token_Usage_History{}
-		var hEntry Token_Usage_History
+		history := map[string]TokenUsageHistory{}
+		var hEntry TokenUsageHistory
 		for (i+1 < len(lines)) && (len(lines[i+1]) > 0) && (lines[i+1][0] == '\t') {
 			i += 1
 			parts = strings.SplitN(lines[i], "\t", 4)
@@ -196,7 +190,7 @@ func loadTokens() error {
 			log.Printf(red("Token for %s revoked as user is no longer registered"), username)
 			continue
 		}
-		tokenInfo = Token_Info{username: username, countdown: countdown, history: history}
+		tokenInfo = TokenInfo{username: username, countdown: countdown, history: history}
 		tokens.Store(token, tokenInfo)
 	}
 	return nil
@@ -208,7 +202,7 @@ func tokensCountdown() {
 	for range time.Tick(TOKEN_COUNTDOWN_TIMER) {
 		// Iterate over tokens
 		tokens.Range(func(token, tokenInfoInterface interface{}) bool {
-			tokenInfo := tokenInfoInterface.(Token_Info)
+			tokenInfo := tokenInfoInterface.(TokenInfo)
 			tokenInfo.countdown -= 1
 			// Drop non active tokens
 			if tokenInfo.countdown == 0 {
@@ -227,7 +221,7 @@ func tokensCountdown() {
 func fullLogOut(username string) {
 	// Iterate over tokens
 	tokens.Range(func(token, tokenInfoInterface interface{}) bool {
-		tokenInfo := tokenInfoInterface.(Token_Info)
+		tokenInfo := tokenInfoInterface.(TokenInfo)
 		if tokenInfo.username == username {
 			tokens.Delete(token)
 		}
